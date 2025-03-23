@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option csharp_namespace = "LovgaBroker";
+
+service Consumer{
+  rpc SubscribeConsumer (SubscribeRequest) returns (Reply);
+}
+
+message SubscribeRequest{
+  string url = 1;
+  string topic = 2;
+}
+
+message Reply {
+  bool success = 1;
+}

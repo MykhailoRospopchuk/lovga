@@ -1,4 +1,4 @@
-namespace LovgaBroker.Workers;
+namespace LovgaBroker.Services.BackgroundServices;
 
 using Models;
 using Services;
