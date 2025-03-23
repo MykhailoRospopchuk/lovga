@@ -17,8 +17,10 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
   </ItemGroup>
-  
+
   <ItemGroup>
-    <Protobuf Include="Protos\consumer.proto" />
+    <Protobuf Include="Protos\consumer_server.proto" GrpcServices="Server"/>
+    <Protobuf Include="Protos\consumer_client.proto" GrpcServices="Client"/>
+    <Protobuf Include="Protos\common.proto" />
   </ItemGroup>
 </Project>

@@ -25,7 +25,7 @@ public class Program
 
         Server grpcServer = new Server
         {
-            Services = { Consumer.BindService(consumer) },
+            Services = { ConsumerServer.BindService(consumer) },
             Ports = { new ServerPort("localhost", 8080, ServerCredentials.Insecure) }
         };
         grpcServer.Start();
