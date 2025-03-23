@@ -18,18 +18,16 @@ public class Worker : BackgroundService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
+            for (int i = 0; i < 500; i++)
             {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                _broker.Publish(new Message
+                {
+                    Topic = "test-topic",
+                    Content = "big bobr",
+                });
             }
 
-            _broker.Publish(new Message
-            {
-                Topic = "test-topic",
-                Content = "big bobr",
-            });
-
-            await Task.Delay(1000, cancellationToken);
+            await Task.Delay(500, cancellationToken);
         }
     }
 }

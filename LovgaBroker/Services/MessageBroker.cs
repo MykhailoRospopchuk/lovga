@@ -1,17 +1,17 @@
 namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 using Models;
 
 public class MessageBroker : IMessageBroker
 {
-    private ConcurrentDictionary<string, ConcurrentQueue<Message>> _queues = new ();
-    private ConcurrentDictionary<string, List<Func<Message, Task>>> _subscribers = new ();
+    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
+    private readonly ConcurrentDictionary<string, List<Func<Message, Task>>> _subscribers = new ();
 
-    public void Publish(Message message)
+    public ValueTask Publish(Message message)
     {
-        var queue = _queues.GetOrAdd(message.Topic, _ => new ConcurrentQueue<Message>());
-        queue.Enqueue(message);
+        return _queues.Writer.WriteAsync(message);
     }
 
     public void Subscribe(string topic, Func<Message, Task> handler)
@@ -22,23 +22,17 @@ public class MessageBroker : IMessageBroker
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        int counter = 0;
+        await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
-            foreach (var topic in _queues.Keys)
+            Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
+            if (_subscribers.TryGetValue(message.Topic, out var handlers))
             {
-                if (_queues.TryGetValue(topic, out var queue) &&
-                    _subscribers.TryGetValue(topic, out var handlers))
+                foreach (var handler in handlers)
                 {
-                    while (queue.TryDequeue(out var msg))
-                    {
-                        foreach (var handler in handlers)
-                        {
-                            await handler(msg);
-                        }
-                    }
+                    await handler(message);
                 }
             }
-            await Task.Delay(500, cancellationToken);
         }
     }
 }

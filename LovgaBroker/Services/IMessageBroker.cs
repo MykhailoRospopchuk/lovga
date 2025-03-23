@@ -4,6 +4,6 @@ using Models;
 
 public interface IMessageBroker
 {
-    void Publish(Message message);
+    ValueTask Publish(Message message);
     void Subscribe(string topic, Func<Message, Task> handler);
 }
