@@ -3,9 +3,9 @@ namespace LovgaClient.Services.GrpcServices;
 using Grpc.Core;
 using LovgaCommon;
 
-public class ConsumerService : ConsumerClient.ConsumerClientBase
+public class ConsumerService : Consumer.ConsumerBase
 {
-    public override Task<Reply> NotifyConsumer(NotifyRequest request, ServerCallContext context)
+    public override Task<Reply> Notify(NotifyRequest request, ServerCallContext context)
     {
         Console.WriteLine($"Message from Broker: {request.Test}");
 

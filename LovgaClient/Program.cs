@@ -10,9 +10,9 @@ class Program
     {
         Console.WriteLine("Hello, World!");
         var channel = new Channel("localhost:8080", ChannelCredentials.Insecure);
-        var client = new ConsumerServer.ConsumerServerClient(channel);
+        var client = new Subscriber.SubscriberClient(channel);
 
-        var reply = client.SubscribeConsumer(new SubscribeRequest
+        var reply = client.Subscribe(new SubscribeRequest
         {
             Url = "http://localhost:7080",
             Topic = "bobr-topic"
@@ -26,7 +26,7 @@ class Program
 
         Server grpcServer = new Server
         {
-            Services = { ConsumerClient.BindService(new ConsumerService()) },
+            Services = { Consumer.BindService(new ConsumerService()) },
             Ports = { new ServerPort("localhost", 7080, ServerCredentials.Insecure) }
         };
 

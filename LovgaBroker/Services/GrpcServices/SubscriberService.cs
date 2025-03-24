@@ -4,18 +4,18 @@ using Grpc.Core;
 using LovgaCommon;
 using Models;
 
-public class ConsumerService : ConsumerServer.ConsumerServerBase
+public class SubscriberService : Subscriber.SubscriberBase
 {
-    private readonly ILogger<ConsumerService> _logger;
+    private readonly ILogger<SubscriberService> _logger;
     private readonly IMessageBroker _broker;
 
-    public ConsumerService(IMessageBroker broker, ILogger<ConsumerService> logger)
+    public SubscriberService(IMessageBroker broker, ILogger<SubscriberService> logger)
     {
         _broker = broker;
         _logger = logger;
     }
 
-    public override Task<Reply> SubscribeConsumer(SubscribeRequest request, ServerCallContext context)
+    public override Task<Reply> Subscribe(SubscribeRequest request, ServerCallContext context)
     {
         _logger.LogInformation($"Subscribe request received from gRPC. Topic: {request.Topic}. Url: {request.Url}");
 
@@ -32,9 +32,9 @@ public class ConsumerService : ConsumerServer.ConsumerServerBase
         _logger.LogInformation($"Send message to subscriber at {message.CreatedAt}");
 
         var channel = new Channel("localhost:7080", ChannelCredentials.Insecure);
-        var client = new ConsumerClient.ConsumerClientClient(channel);
+        var client = new Consumer.ConsumerClient(channel);
 
-        var reply = client.NotifyConsumer(new NotifyRequest
+        var reply = client.Notify(new NotifyRequest
         {
             Test = "This is me - BOBR!"
         });

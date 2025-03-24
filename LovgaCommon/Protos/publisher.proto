@@ -1,0 +1,15 @@
+syntax = "proto3";
+import "common.proto";
+
+option csharp_namespace = "LovgaCommon";
+
+package broker.publisher;
+
+service Publisher{
+  rpc Publish (PublishRequest) returns (broker.reply.Reply);
+}
+
+message PublishRequest{
+  string topic = 1;
+  string content = 2;
+}

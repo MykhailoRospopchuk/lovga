@@ -3,10 +3,10 @@ import "common.proto";
 
 option csharp_namespace = "LovgaCommon";
 
-package broker.client;
+package broker.consumer;
 
-service ConsumerClient{
-  rpc NotifyConsumer (NotifyRequest) returns (broker.reply.Reply);
+service Consumer{
+  rpc Notify (NotifyRequest) returns (broker.reply.Reply);
 }
 
 message NotifyRequest{

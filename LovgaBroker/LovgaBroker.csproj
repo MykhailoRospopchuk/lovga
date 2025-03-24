@@ -19,8 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\LovgaCommon\Protos\consumer_server.proto" GrpcServices="Server"/>
-    <Protobuf Include="..\LovgaCommon\Protos\consumer_client.proto" GrpcServices="Client"/>
+    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Server"/>
+    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Client"/>
+    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Server"/>
     <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
   </ItemGroup>
 </Project>

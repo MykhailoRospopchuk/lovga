@@ -18,15 +18,15 @@ public class Program
         builder.Services.AddSingleton<IMessageBroker, MessageBroker>();
 
         // builder.Services.AddGrpc();
-        builder.Services.AddSingleton<ConsumerService>();
+        builder.Services.AddSingleton<SubscriberService>();
 
         var host = builder.Build();
 
-        var consumer = host.Services.GetRequiredService<ConsumerService>();
+        var subscriber = host.Services.GetRequiredService<SubscriberService>();
 
         Server grpcServer = new Server
         {
-            Services = { ConsumerServer.BindService(consumer) },
+            Services = { Subscriber.BindService(subscriber) },
             Ports = { new ServerPort("localhost", 8080, ServerCredentials.Insecure) }
         };
         grpcServer.Start();
