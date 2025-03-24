@@ -1,0 +1,14 @@
+syntax = "proto3";
+import "Protos/common.proto";
+
+option csharp_namespace = "LovgaClient";
+
+package broker.client;
+
+service ConsumerClient{
+  rpc NotifyConsumer (NotifyRequest) returns (broker.common.Reply);
+}
+
+message NotifyRequest{
+  string test = 1;
+}

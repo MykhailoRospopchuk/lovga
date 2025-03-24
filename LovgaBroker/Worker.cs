@@ -18,16 +18,16 @@ public class Worker : BackgroundService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            // for (int i = 0; i < 500; i++)
-            // {
-            //     _broker.Publish(new Message
-            //     {
-            //         Topic = "test-topic",
-            //         Content = "big bobr",
-            //     });
-            // }
+            for (int i = 0; i < 5; i++)
+            {
+                _broker.Publish(new Message
+                {
+                    Topic = "bobr-topic",
+                    Content = "big bobr",
+                });
+            }
 
-            await Task.Delay(500, cancellationToken);
+            await Task.Delay(5000, cancellationToken);
         }
     }
 }

@@ -19,15 +19,30 @@ public class ConsumerService : ConsumerServer.ConsumerServerBase
         _logger.LogInformation($"Subscribe request received from gRPC. Topic: {request.Topic}. Url: {request.Url}");
 
         _broker.Subscribe("test-topic", HandleMessageAsync);
+        _broker.Subscribe(request.Topic, HandleMessageAsync);
         return Task.FromResult(new Reply
         {
-            Success = false,
+            Success = true,
         });
     }
 
     private Task HandleMessageAsync(Message message)
     {
-        _logger.LogInformation($"Received message: {message.Content} at {message.CreatedAt}");
+        _logger.LogInformation($"Send message to subscriber at {message.CreatedAt}");
+
+        var channel = new Channel("localhost:7080", ChannelCredentials.Insecure);
+        var client = new ConsumerClient.ConsumerClientClient(channel);
+
+        var reply = client.NotifyConsumer(new NotifyRequest
+        {
+            Test = "This is me - BOBR!"
+        });
+
+        if (!reply.Success)
+        {
+            _logger.LogError("Error");
+        }
+
         return Task.CompletedTask;
     }
 }
