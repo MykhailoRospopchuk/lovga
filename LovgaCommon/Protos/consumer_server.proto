@@ -1,0 +1,15 @@
+syntax = "proto3";
+import "common.proto";
+
+option csharp_namespace = "LovgaCommon";
+
+package broker.server;
+
+service ConsumerServer{
+  rpc SubscribeConsumer (SubscribeRequest) returns (broker.reply.Reply);
+}
+
+message SubscribeRequest{
+  string url = 1;
+  string topic = 2;
+}

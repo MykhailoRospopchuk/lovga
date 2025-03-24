@@ -1,6 +1,7 @@
 namespace LovgaClient.Services.GrpcServices;
 
 using Grpc.Core;
+using LovgaCommon;
 
 public class ConsumerService : ConsumerClient.ConsumerClientBase
 {

@@ -1,6 +1,7 @@
 namespace LovgaBroker;
 
 using Grpc.Core;
+using LovgaCommon;
 using Services;
 using Services.BackgroundServices;
 using Services.GrpcServices;

@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-option csharp_namespace = "LovgaBroker";
-
-package broker.common;
-
-message Reply {
-  bool success = 1;
-}

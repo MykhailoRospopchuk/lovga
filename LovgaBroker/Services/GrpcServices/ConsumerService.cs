@@ -1,6 +1,7 @@
 namespace LovgaBroker.Services.GrpcServices;
 
 using Grpc.Core;
+using LovgaCommon;
 using Models;
 
 public class ConsumerService : ConsumerServer.ConsumerServerBase
