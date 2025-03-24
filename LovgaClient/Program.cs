@@ -9,12 +9,13 @@ class Program
     static async Task Main(string[] args)
     {
         Console.WriteLine("Hello, World!");
-        var channel = new Channel("localhost:8080", ChannelCredentials.Insecure);
+        var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
         var client = new Subscriber.SubscriberClient(channel);
 
         var reply = client.Subscribe(new SubscribeRequest
         {
-            Url = "http://localhost:7080",
+            Host = "localhost",
+            Port = 7080,
             Topic = "bobr-topic"
         });
 

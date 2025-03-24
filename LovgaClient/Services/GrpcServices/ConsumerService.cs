@@ -7,7 +7,7 @@ public class ConsumerService : Consumer.ConsumerBase
 {
     public override Task<Reply> Notify(NotifyRequest request, ServerCallContext context)
     {
-        Console.WriteLine($"Message from Broker: {request.Test}");
+        Console.WriteLine($"Message from Broker: {request.Content}");
 
         return Task.FromResult(new Reply
         {
