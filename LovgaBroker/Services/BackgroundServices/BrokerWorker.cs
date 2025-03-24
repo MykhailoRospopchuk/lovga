@@ -12,9 +12,6 @@ public class BrokerWorker : BackgroundService
     {
         _broker = broker;
         _logger = logger;
-
-        // Example subscription
-        _broker.Subscribe("test-topic", HandleMessageAsync);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

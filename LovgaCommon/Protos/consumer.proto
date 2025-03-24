@@ -10,5 +10,5 @@ service Consumer{
 }
 
 message NotifyRequest{
-  string test = 1;
+  string content = 1;
 }

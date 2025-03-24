@@ -8,42 +8,26 @@ public class SubscriberService : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberService> _logger;
     private readonly IMessageBroker _broker;
+    private readonly ILoggerFactory _loggerFactory;
 
-    public SubscriberService(IMessageBroker broker, ILogger<SubscriberService> logger)
+    public SubscriberService(IMessageBroker broker, ILogger<SubscriberService> logger, ILoggerFactory loggerFactory)
     {
         _broker = broker;
         _logger = logger;
+        _loggerFactory = loggerFactory;
     }
 
     public override Task<Reply> Subscribe(SubscribeRequest request, ServerCallContext context)
     {
-        _logger.LogInformation($"Subscribe request received from gRPC. Topic: {request.Topic}. Url: {request.Url}");
+        _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
 
-        _broker.Subscribe("test-topic", HandleMessageAsync);
-        _broker.Subscribe(request.Topic, HandleMessageAsync);
+        var logger = _loggerFactory.CreateLogger<ConsumerService>();
+        var consumer = new ConsumerService(request.Host, request.Port, request.Topic, logger);
+
+        _broker.Subscribe(request.Topic, consumer);
         return Task.FromResult(new Reply
         {
             Success = true,
         });
-    }
-
-    private Task HandleMessageAsync(Message message)
-    {
-        _logger.LogInformation($"Send message to subscriber at {message.CreatedAt}");
-
-        var channel = new Channel("localhost:7080", ChannelCredentials.Insecure);
-        var client = new Consumer.ConsumerClient(channel);
-
-        var reply = client.Notify(new NotifyRequest
-        {
-            Test = "This is me - BOBR!"
-        });
-
-        if (!reply.Success)
-        {
-            _logger.LogError("Error");
-        }
-
-        return Task.CompletedTask;
     }
 }

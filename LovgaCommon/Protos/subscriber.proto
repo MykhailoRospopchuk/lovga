@@ -10,6 +10,7 @@ service Subscriber{
 }
 
 message SubscribeRequest{
-  string url = 1;
-  string topic = 2;
+  string host = 1;
+  int32 port = 2;
+  string topic = 3;
 }

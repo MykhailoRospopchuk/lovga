@@ -2,22 +2,26 @@ namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using GrpcServices;
 using Models;
 
 public class MessageBroker : IMessageBroker
 {
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, List<Func<Message, Task>>> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, ConsumerService> _subscribers = new ();
 
     public ValueTask Publish(Message message)
     {
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string topic, Func<Message, Task> handler)
+    public void Subscribe(string topic, ConsumerService consumer)
     {
-        var handlers = _subscribers.GetOrAdd(topic, _ => new List<Func<Message, Task>>());
-        handlers.Add(handler);
+        var consumerAdded = _subscribers.TryAdd(topic, consumer);
+        if (!consumerAdded)
+        {
+            throw new InvalidOperationException($"Cannot subscribe to {topic} because it already exists.");
+        }
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
@@ -26,12 +30,9 @@ public class MessageBroker : IMessageBroker
         await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
             Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
-            if (_subscribers.TryGetValue(message.Topic, out var handlers))
+            if (_subscribers.TryGetValue(message.Topic, out var handler))
             {
-                foreach (var handler in handlers)
-                {
-                    await handler(message);
-                }
+                await handler.Notify(message);
             }
         }
     }
