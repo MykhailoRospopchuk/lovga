@@ -1,10 +1,11 @@
 namespace LovgaBroker.Services.GrpcServices;
 
 using Grpc.Core;
+using Interfaces;
 using LovgaCommon;
 using Models;
 
-public class ConsumerService
+public class ConsumerService : IConsumerObserver
 {
     private readonly string _host;
     private readonly int _port;
@@ -20,7 +21,7 @@ public class ConsumerService
     }
 
     // TODO: handle when consumer unpredicted shut down
-    public async Task Notify(Message message) 
+    public async Task DeliverMessage(Message message) 
     {
         if (message.Topic != _topic)
         {

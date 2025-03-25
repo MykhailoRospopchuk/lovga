@@ -2,20 +2,20 @@ namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using GrpcServices;
+using Interfaces;
 using Models;
 
 public class MessageBroker : IMessageBroker
 {
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, ConsumerService> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, IConsumerObserver> _subscribers = new ();
 
     public ValueTask Publish(Message message)
     {
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string topic, ConsumerService consumer)
+    public void Subscribe(string topic, IConsumerObserver consumer)
     {
         var consumerAdded = _subscribers.TryAdd(topic, consumer);
         if (!consumerAdded)
@@ -32,7 +32,7 @@ public class MessageBroker : IMessageBroker
             Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
             if (_subscribers.TryGetValue(message.Topic, out var handler))
             {
-                await handler.Notify(message);
+                await handler.DeliverMessage(message);
             }
         }
     }
