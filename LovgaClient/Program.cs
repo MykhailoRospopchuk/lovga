@@ -16,7 +16,8 @@ class Program
         {
             Host = "localhost",
             Port = 7080,
-            Topic = "bobr-topic"
+            Topic = "bobr-topic",
+            Id = Guid.NewGuid().ToString()
         });
 
         if (!reply.Success)

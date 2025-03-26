@@ -5,6 +5,7 @@ using Models;
 
 public interface IMessageBroker
 {
-    ValueTask Publish(Message message);
-    void Subscribe(string topic, IConsumerObserver consumer);
+    string Topic { get; }
+    ValueTask EnqueueMessage(Message message);
+    void Subscribe(string subscriberId, IConsumerObserver consumer);
 }

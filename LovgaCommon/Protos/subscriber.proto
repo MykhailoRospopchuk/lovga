@@ -13,4 +13,5 @@ message SubscribeRequest{
   string host = 1;
   int32 port = 2;
   string topic = 3;
+  string id = 4;
 }

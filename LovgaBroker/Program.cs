@@ -1,6 +1,7 @@
 namespace LovgaBroker;
 
 using Grpc.Core;
+using Interfaces;
 using LovgaCommon;
 using Services;
 using Services.BackgroundServices;
@@ -15,7 +16,8 @@ public class Program
         builder.Services.AddHostedService<Worker>();
         builder.Services.AddHostedService<BrokerWorker>();
 
-        builder.Services.AddSingleton<IMessageBroker, MessageBroker>();
+        builder.Services.AddSingleton<IBrokerManager, BrokerManager>();
+        builder.Services.AddSingleton<IReceiver, ReceiverService>();
 
         // builder.Services.AddGrpc();
         builder.Services.AddSingleton<SubscriberService>();

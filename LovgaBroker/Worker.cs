@@ -1,14 +1,15 @@
 namespace LovgaBroker;
 
+using Interfaces;
 using Models;
 using Services;
 
 public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
-    private readonly IMessageBroker _broker;
+    private readonly IBrokerManager _broker;
 
-    public Worker(ILogger<Worker> logger, IMessageBroker broker)
+    public Worker(ILogger<Worker> logger, IBrokerManager broker)
     {
         _logger = logger;
         _broker = broker;
@@ -16,9 +17,11 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        var broker = _broker.GetBroker("bobr-topic");
         while (!cancellationToken.IsCancellationRequested)
         {
-            _broker.Publish(new Message
+            
+            await broker.EnqueueMessage(new Message
             {
                 Topic = "bobr-topic",
                 Content = $"from bobr - {DateTime.Now.ToLongTimeString()}",

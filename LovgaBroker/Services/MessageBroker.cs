@@ -7,18 +7,30 @@ using Models;
 
 public class MessageBroker : IMessageBroker
 {
-    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, List<IConsumerObserver>> _subscribers = new ();
+    public string Topic { get; }
 
-    public ValueTask Publish(Message message)
+    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
+    private readonly ConcurrentDictionary<string, IConsumerObserver> _subscribers = new ();
+    private readonly SemaphoreSlim _subscriberSignal = new(0);
+    private readonly object _subscriberLock = new();
+
+    public MessageBroker(string topic)
+    {
+        Topic = topic;
+    }
+
+    public ValueTask EnqueueMessage(Message message)
     {
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string topic, IConsumerObserver consumer)
+    public void Subscribe(string subscriberId, IConsumerObserver consumer)
     {
-        var consumerAdded = _subscribers.GetOrAdd(topic, new List<IConsumerObserver>());
-        consumerAdded.Add(consumer);
+        _subscribers.TryAdd(subscriberId, consumer);
+        if (_subscribers.Count == 1)
+        {
+            _subscriberSignal.Release();
+        }
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
@@ -26,13 +38,20 @@ public class MessageBroker : IMessageBroker
         int counter = 0;
         await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
-            Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
-            if (_subscribers.TryGetValue(message.Topic, out var handlers))
+            while (true)
             {
-                foreach (var handler in handlers)
+                lock (_subscriberLock)
                 {
-                    await handler.DeliverMessage(message);
+                    if (_subscribers.Count > 0)
+                        break;
                 }
+                await _subscriberSignal.WaitAsync(cancellationToken);
+            }
+
+            Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
+            foreach (var handler in _subscribers)
+            {
+                await handler.Value.DeliverMessage(message);
             }
         }
     }

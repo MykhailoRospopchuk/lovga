@@ -1,15 +1,16 @@
 namespace LovgaBroker.Services.GrpcServices;
 
 using Grpc.Core;
+using Interfaces;
 using LovgaCommon;
 
 public class SubscriberService : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberService> _logger;
-    private readonly IMessageBroker _broker;
+    private readonly IBrokerManager _broker;
     private readonly ILoggerFactory _loggerFactory;
 
-    public SubscriberService(IMessageBroker broker, ILogger<SubscriberService> logger, ILoggerFactory loggerFactory)
+    public SubscriberService(IBrokerManager broker, ILogger<SubscriberService> logger, ILoggerFactory loggerFactory)
     {
         _broker = broker;
         _logger = logger;
@@ -31,7 +32,8 @@ public class SubscriberService : Subscriber.SubscriberBase
             });
         }
 
-        _broker.Subscribe(request.Topic, consumer);
+        var broker = _broker.GetBroker(request.Topic);
+        broker.Subscribe(request.Id, consumer);
         return Task.FromResult(new Reply
         {
             Success = true,
