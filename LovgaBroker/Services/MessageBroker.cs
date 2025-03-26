@@ -8,7 +8,7 @@ using Models;
 public class MessageBroker : IMessageBroker
 {
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, IConsumerObserver> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, List<IConsumerObserver>> _subscribers = new ();
 
     public ValueTask Publish(Message message)
     {
@@ -17,11 +17,8 @@ public class MessageBroker : IMessageBroker
 
     public void Subscribe(string topic, IConsumerObserver consumer)
     {
-        var consumerAdded = _subscribers.TryAdd(topic, consumer);
-        if (!consumerAdded)
-        {
-            throw new InvalidOperationException($"Cannot subscribe to {topic} because it already exists.");
-        }
+        var consumerAdded = _subscribers.GetOrAdd(topic, new List<IConsumerObserver>());
+        consumerAdded.Add(consumer);
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
@@ -30,9 +27,12 @@ public class MessageBroker : IMessageBroker
         await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
             Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
-            if (_subscribers.TryGetValue(message.Topic, out var handler))
+            if (_subscribers.TryGetValue(message.Topic, out var handlers))
             {
-                await handler.DeliverMessage(message);
+                foreach (var handler in handlers)
+                {
+                    await handler.DeliverMessage(message);
+                }
             }
         }
     }

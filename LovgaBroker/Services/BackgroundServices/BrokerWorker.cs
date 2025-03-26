@@ -1,6 +1,5 @@
 namespace LovgaBroker.Services.BackgroundServices;
 
-using Models;
 using Services;
 
 public class BrokerWorker : BackgroundService
@@ -22,11 +21,5 @@ public class BrokerWorker : BackgroundService
         {
             await messageBroker.DispatchAsync(stoppingToken);
         }
-    }
-
-    private Task HandleMessageAsync(Message message)
-    {
-        _logger.LogInformation($"Received message: {message.Content} at {message.CreatedAt}");
-        return Task.CompletedTask;
     }
 }

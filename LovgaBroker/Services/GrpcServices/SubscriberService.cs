@@ -2,7 +2,6 @@ namespace LovgaBroker.Services.GrpcServices;
 
 using Grpc.Core;
 using LovgaCommon;
-using Models;
 
 public class SubscriberService : Subscriber.SubscriberBase
 {
@@ -23,6 +22,14 @@ public class SubscriberService : Subscriber.SubscriberBase
 
         var logger = _loggerFactory.CreateLogger<ConsumerService>();
         var consumer = new ConsumerService(request.Host, request.Port, request.Topic, logger);
+
+        if (!consumer.InitChannel())
+        {
+            return Task.FromResult(new Reply
+            {
+                Success = false,
+            });
+        }
 
         _broker.Subscribe(request.Topic, consumer);
         return Task.FromResult(new Reply

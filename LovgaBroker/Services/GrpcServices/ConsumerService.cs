@@ -11,6 +11,7 @@ public class ConsumerService : IConsumerObserver
     private readonly int _port;
     private readonly string _topic;
     private readonly ILogger<ConsumerService> _logger;
+    private Channel _channel;
 
     public ConsumerService(string host, int port, string topic, ILogger<ConsumerService> logger)
     {
@@ -18,6 +19,21 @@ public class ConsumerService : IConsumerObserver
         _port = port;
         _topic = topic;
         _logger = logger;
+    }
+
+    public bool InitChannel()
+    {
+        try
+        {
+            _channel = new Channel(_host, _port, ChannelCredentials.Insecure);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error initializing channel");
+            return false;
+        }
+
+        return true;
     }
 
     // TODO: handle when consumer unpredicted shut down
@@ -30,8 +46,7 @@ public class ConsumerService : IConsumerObserver
             throw new ArgumentException($"Invalid topic {_topic}");
         }
 
-        var channel = new Channel(_host, _port, ChannelCredentials.Insecure);
-        var client = new Consumer.ConsumerClient(channel);
+        var client = new Consumer.ConsumerClient(_channel);
 
         var reply = await client.NotifyAsync(new NotifyRequest
         {
