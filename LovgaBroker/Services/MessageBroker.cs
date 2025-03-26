@@ -13,7 +13,7 @@ public class MessageBroker : IMessageBroker
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
     private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new ();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
-    private readonly object _subscriberLock = new();
+    private readonly Lock _subscriberLock = new();
 
     public MessageBroker(string topic)
     {
