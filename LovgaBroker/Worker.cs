@@ -17,17 +17,17 @@ public class Worker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var broker = _broker.GetBroker("bobr-topic");
-        while (!cancellationToken.IsCancellationRequested)
-        {
-
-            await broker.EnqueueMessage(new Message
-            {
-                Topic = "bobr-topic",
-                Content = $"from bobr - {DateTime.Now.ToLongTimeString()}",
-            });
-
-            await Task.Delay(500, cancellationToken);
-        }
+        // var broker = _broker.GetBroker("bobr-topic");
+        // while (!cancellationToken.IsCancellationRequested)
+        // {
+        //
+        //     await broker.EnqueueMessage(new Message
+        //     {
+        //         Topic = "bobr-topic",
+        //         Content = $"from bobr - {DateTime.Now.ToLongTimeString()}",
+        //     });
+        //
+        //     await Task.Delay(500, cancellationToken);
+        // }
     }
 }

@@ -22,6 +22,7 @@ public class Program
 
         // builder.Services.AddGrpc();
         builder.Services.AddSingleton<SubscriberGrpcServer>();
+        builder.Services.AddSingleton<PublisherGrpcServer>();
 
         var host = builder.Build();
 
