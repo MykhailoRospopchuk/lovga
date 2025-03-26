@@ -1,8 +1,8 @@
-namespace LovgaBroker.Interfaces;
+namespace LovgaBroker.GrpcServices.Interfaces;
 
 using Models;
 
-public interface IConsumer
+public interface IConsumerGrpcClient
 {
     bool InitChannel();
     Task DeliverMessage(Message message);

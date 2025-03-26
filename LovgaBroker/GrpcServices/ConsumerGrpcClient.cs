@@ -1,19 +1,19 @@
-namespace LovgaBroker.Services.GrpcServices;
+namespace LovgaBroker.GrpcServices;
 
 using Grpc.Core;
 using Interfaces;
 using LovgaCommon;
 using Models;
 
-public class ConsumerService : IConsumer
+public class ConsumerGrpcClient : IConsumerGrpcClient
 {
     private readonly string _host;
     private readonly int _port;
     private readonly string _topic;
-    private readonly ILogger<ConsumerService> _logger;
+    private readonly ILogger<ConsumerGrpcClient> _logger;
     private Channel _channel;
 
-    public ConsumerService(string host, int port, string topic, ILogger<ConsumerService> logger)
+    public ConsumerGrpcClient(string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
     {
         _host = host;
         _port = port;

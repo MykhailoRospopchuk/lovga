@@ -1,16 +1,16 @@
-namespace LovgaBroker.Services.GrpcServices;
+namespace LovgaBroker.GrpcServices;
 
 using Grpc.Core;
-using Interfaces;
+using LovgaBroker.Interfaces;
 using LovgaCommon;
 
-public class SubscriberService : Subscriber.SubscriberBase
+public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
-    private readonly ILogger<SubscriberService> _logger;
+    private readonly ILogger<SubscriberGrpcServer> _logger;
     private readonly IBrokerManager _broker;
     private readonly ILoggerFactory _loggerFactory;
 
-    public SubscriberService(IBrokerManager broker, ILogger<SubscriberService> logger, ILoggerFactory loggerFactory)
+    public SubscriberGrpcServer(IBrokerManager broker, ILogger<SubscriberGrpcServer> logger, ILoggerFactory loggerFactory)
     {
         _broker = broker;
         _logger = logger;
@@ -21,8 +21,8 @@ public class SubscriberService : Subscriber.SubscriberBase
     {
         _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
 
-        var logger = _loggerFactory.CreateLogger<ConsumerService>();
-        var consumer = new ConsumerService(request.Host, request.Port, request.Topic, logger);
+        var logger = _loggerFactory.CreateLogger<ConsumerGrpcClient>();
+        var consumer = new ConsumerGrpcClient(request.Host, request.Port, request.Topic, logger);
 
         if (!consumer.InitChannel())
         {

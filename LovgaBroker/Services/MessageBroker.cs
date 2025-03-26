@@ -2,6 +2,7 @@ namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using GrpcServices.Interfaces;
 using Interfaces;
 using Models;
 
@@ -10,7 +11,7 @@ public class MessageBroker : IMessageBroker
     public string Topic { get; }
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, IConsumer> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new ();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly object _subscriberLock = new();
 
@@ -24,9 +25,9 @@ public class MessageBroker : IMessageBroker
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string subscriberId, IConsumer consumer)
+    public void Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
     {
-        _subscribers.TryAdd(subscriberId, consumer);
+        _subscribers.TryAdd(subscriberId, consumerGrpcClient);
         if (_subscribers.Count == 1)
         {
             _subscriberSignal.Release();
