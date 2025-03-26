@@ -27,6 +27,11 @@ class Program
                     Topic = "bobr-topic",
                     Content = $"This is publisher content2: {i} : {j}"
                 });
+                var reply3 = client.Publish(new PublishRequest
+                {
+                    Topic = "bobr-topic",
+                    Content = $"This is publisher content2: {i} : {j}"
+                });
 
                 if (!reply.Success)
                 {
@@ -36,9 +41,12 @@ class Program
                 {
                     Console.WriteLine("Error2");
                 }
+                if (!reply3.Success)
+                {
+                    Console.WriteLine("Error2");
+                }
             }
-
-            await Task.Delay(numbers);
+            await Task.Delay(numbers*100);
         }
     }
 }

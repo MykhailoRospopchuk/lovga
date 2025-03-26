@@ -5,5 +5,5 @@ using Models;
 public interface IConsumerGrpcClient
 {
     bool InitChannel();
-    Task DeliverMessage(Message message);
+    Task<bool> DeliverMessage(Message message);
 }

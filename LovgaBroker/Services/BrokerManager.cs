@@ -5,7 +5,13 @@ using Interfaces;
 
 public class BrokerManager : IBrokerManager
 {
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ConcurrentDictionary<string, IMessageBroker> _brokers = new();
+
+    public BrokerManager(IServiceScopeFactory serviceScopeFactory)
+    {
+        _serviceScopeFactory = serviceScopeFactory;
+    }
 
     public event Action<IMessageBroker>? OnBrokerAdded;
 
@@ -16,7 +22,11 @@ public class BrokerManager : IBrokerManager
             return broker;
         }
 
-        broker = new MessageBroker(topic);
+        using var scope = _serviceScopeFactory.CreateAsyncScope();
+        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger<MessageBroker>();
+
+        broker = new MessageBroker(topic, logger);
         if (_brokers.TryAdd(topic, broker))
         {
             OnBrokerAdded?.Invoke(broker);

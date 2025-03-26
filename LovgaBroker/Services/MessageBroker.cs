@@ -9,15 +9,17 @@ using Models;
 public class MessageBroker : IMessageBroker
 {
     public string Topic { get; }
+    private readonly ILogger<MessageBroker> _logger;
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
     private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new ();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly Lock _subscriberLock = new();
 
-    public MessageBroker(string topic)
+    public MessageBroker(string topic, ILogger<MessageBroker> logger)
     {
         Topic = topic;
+        _logger = logger;
     }
 
     public ValueTask EnqueueMessage(Message message)
@@ -49,10 +51,28 @@ public class MessageBroker : IMessageBroker
                 await _subscriberSignal.WaitAsync(cancellationToken);
             }
 
-            Console.WriteLine($"{counter++}/{_queues.Reader.Count}");
-            foreach (var handler in _subscribers)
+            var keyToRemove = new List<string>();
+            _logger.LogInformation($"{counter++}/{_queues.Reader.Count}");
+            try
             {
-                await handler.Value.DeliverMessage(message);
+                foreach (var handler in _subscribers)
+                {
+                    if (!await handler.Value.DeliverMessage(message))
+                    {
+                        keyToRemove.Add(handler.Key);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e.Message);
+            }
+            finally
+            {
+                foreach (var key in keyToRemove)
+                {
+                    _subscribers.TryRemove(key, out _);
+                }
             }
         }
     }

@@ -37,7 +37,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
     }
 
     // TODO: handle when consumer unpredicted shut down
-    public async Task DeliverMessage(Message message) 
+    public async Task<bool> DeliverMessage(Message message) 
     {
         if (message.Topic != _topic)
         {
@@ -46,16 +46,26 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
             throw new ArgumentException($"Invalid topic {_topic}");
         }
 
-        var client = new Consumer.ConsumerClient(_channel);
-
-        var reply = await client.NotifyAsync(new NotifyRequest
+        try
         {
-            Content = message.Content,
-        });
+            var client = new Consumer.ConsumerClient(_channel);
 
-        if (!reply.Success)
+            var reply = await client.NotifyAsync(new NotifyRequest
+            {
+                Content = message.Content,
+            });
+
+            if (!reply.Success)
+            {
+                _logger.LogError("Error. Consumer failed to notify");
+            }
+
+            return true;
+        }
+        catch (Exception e)
         {
-            _logger.LogError("Error. Consumer failed to notify");
+            _logger.LogError(e.Message);
+            return false;
         }
     }
 }
