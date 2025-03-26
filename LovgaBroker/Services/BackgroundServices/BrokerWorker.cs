@@ -16,7 +16,7 @@ public class BrokerWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Broker Service is starting.");
+        _logger.LogInformation("Broker Worker is starting.");
 
         var brokers = _broker.GetAllBrokers();
         var dispatchTasks = brokers.Select(b =>

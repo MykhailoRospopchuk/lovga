@@ -5,7 +5,7 @@ using Interfaces;
 using LovgaCommon;
 using Models;
 
-public class ConsumerService : IConsumerObserver
+public class ConsumerService : IConsumer
 {
     private readonly string _host;
     private readonly int _port;

@@ -10,7 +10,7 @@ public class MessageBroker : IMessageBroker
     public string Topic { get; }
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, IConsumerObserver> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, IConsumer> _subscribers = new ();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly object _subscriberLock = new();
 
@@ -24,7 +24,7 @@ public class MessageBroker : IMessageBroker
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string subscriberId, IConsumerObserver consumer)
+    public void Subscribe(string subscriberId, IConsumer consumer)
     {
         _subscribers.TryAdd(subscriberId, consumer);
         if (_subscribers.Count == 1)

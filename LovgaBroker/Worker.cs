@@ -20,7 +20,7 @@ public class Worker : BackgroundService
         var broker = _broker.GetBroker("bobr-topic");
         while (!cancellationToken.IsCancellationRequested)
         {
-            
+
             await broker.EnqueueMessage(new Message
             {
                 Topic = "bobr-topic",

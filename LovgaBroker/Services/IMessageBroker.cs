@@ -7,5 +7,5 @@ public interface IMessageBroker
 {
     string Topic { get; }
     ValueTask EnqueueMessage(Message message);
-    void Subscribe(string subscriberId, IConsumerObserver consumer);
+    void Subscribe(string subscriberId, IConsumer consumer);
 }
