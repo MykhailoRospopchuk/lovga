@@ -7,9 +7,22 @@ public class BrokerManager : IBrokerManager
 {
     private readonly ConcurrentDictionary<string, IMessageBroker> _brokers = new();
 
+    public event Action<IMessageBroker>? OnBrokerAdded;
+
     public IMessageBroker GetBroker(string topic)
     {
-        return _brokers.GetOrAdd(topic, t => new MessageBroker(t));
+        if (_brokers.TryGetValue(topic, out IMessageBroker? broker))
+        {
+            return broker;
+        }
+
+        broker = new MessageBroker(topic);
+        if (_brokers.TryAdd(topic, broker))
+        {
+            OnBrokerAdded?.Invoke(broker);
+        }
+
+        return broker;
     }
 
     public IEnumerable<IMessageBroker> GetAllBrokers()

@@ -8,4 +8,5 @@ public interface IMessageBroker
     string Topic { get; }
     ValueTask EnqueueMessage(Message message);
     void Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
+    Task DispatchAsync(CancellationToken cancellationToken);
 }

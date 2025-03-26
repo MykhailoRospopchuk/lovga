@@ -1,34 +1,52 @@
 namespace LovgaBroker.Services.BackgroundServices;
 
+using System.Collections.Concurrent;
 using Interfaces;
 using Services;
 
 public class BrokerWorker : BackgroundService
 {
-    private readonly IBrokerManager _broker;
+    private readonly IBrokerManager _brokerManager;
     private readonly ILogger<BrokerWorker> _logger;
+    private readonly ConcurrentDictionary<string, Task> _dispatchers = new();
 
-    public BrokerWorker(IBrokerManager broker, ILogger<BrokerWorker> logger)
+    public BrokerWorker(IBrokerManager brokerManager, ILogger<BrokerWorker> logger)
     {
-        _broker = broker;
+        _brokerManager = brokerManager;
         _logger = logger;
+
+        _brokerManager.OnBrokerAdded += OnBrokerAdded;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Broker Worker is starting.");
+        _logger.LogInformation("Broker Worker is starting");
 
-        var brokers = _broker.GetAllBrokers();
-        var dispatchTasks = brokers.Select(b =>
+        var brokers = _brokerManager.GetAllBrokers();
+        foreach (var broker in brokers)
         {
-            if (b is MessageBroker messageBroker)
+            if (broker is MessageBroker messageBroker)
             {
-                return messageBroker.DispatchAsync(cancellationToken);
+                _dispatchers.TryAdd(messageBroker.Topic, messageBroker.DispatchAsync(cancellationToken));
             }
-            
-            return Task.CompletedTask;
-        });
+        }
 
-        await Task.WhenAll(dispatchTasks);
+        await Task.Delay(Timeout.Infinite, cancellationToken);
+    }
+
+    private void OnBrokerAdded(IMessageBroker broker)
+    {
+        if (_dispatchers.Keys.Contains(broker.Topic))
+        {
+            return;
+        }
+
+        _dispatchers.TryAdd(broker.Topic, broker.DispatchAsync(CancellationToken.None));
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await Task.WhenAll(_dispatchers.Values);
+        _logger.LogInformation("Broker Worker is stopping");
     }
 }
