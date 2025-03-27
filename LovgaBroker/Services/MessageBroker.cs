@@ -2,6 +2,7 @@ namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using GrpcServices;
 using GrpcServices.Interfaces;
 using Interfaces;
 using Models;
@@ -40,7 +41,7 @@ public class MessageBroker : IMessageBroker
 
     public bool Unsubscribe(string subscriberId)
     {
-        return _subscribers.TryRemove(subscriberId, out _);
+        return RemoveSubscriber(subscriberId);
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
@@ -78,9 +79,23 @@ public class MessageBroker : IMessageBroker
             {
                 foreach (var key in keyToRemove)
                 {
-                    _subscribers.TryRemove(key, out _);
+                    RemoveSubscriber(key);
                 }
             }
         }
+    }
+
+    private bool RemoveSubscriber(string subscriberId)
+    {
+        if (_subscribers.TryRemove(subscriberId, out IConsumerGrpcClient? existConsumer))
+        {
+            if (existConsumer is ConsumerGrpcClient cgClient)
+            {
+                cgClient.Dispose();
+                return true;
+            }
+        }
+
+        return false;
     }
 }

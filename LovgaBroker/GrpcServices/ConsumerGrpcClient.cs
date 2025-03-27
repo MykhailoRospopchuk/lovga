@@ -5,13 +5,16 @@ using Interfaces;
 using LovgaCommon;
 using Models;
 
-public class ConsumerGrpcClient : IConsumerGrpcClient
+public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 {
     private readonly string _host;
     private readonly int _port;
     private readonly string _topic;
     private readonly ILogger<ConsumerGrpcClient> _logger;
     private Channel? _channel;
+    private bool _disposed;
+
+    public string Id { get; }
 
     public ConsumerGrpcClient(string id, string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
     {
@@ -21,8 +24,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
         _topic = topic;
         _logger = logger;
     }
-
-    public string Id { get; }
 
     public bool InitChannel()
     {
@@ -75,5 +76,34 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
             _logger.LogError(e.Message);
             return false;
         }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+        {
+            if (_channel != null)
+            {
+                try
+                {
+                    _channel.ShutdownAsync().GetAwaiter().GetResult();
+                    _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - gRPC channel shutdown successfully.");
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, $"Error shutting down gRPC channel Consumer ID: {Id} Topic: {_topic}");
+                }
+            }
+        }
+
+        _disposed = true;
     }
 }
