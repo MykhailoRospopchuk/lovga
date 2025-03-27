@@ -6,7 +6,7 @@ option csharp_namespace = "LovgaCommon";
 package broker.consumer;
 
 service Consumer{
-  rpc Notify (NotifyRequest) returns (broker.reply.Reply);
+  rpc Notify (NotifyRequest) returns (broker.common.Reply);
 }
 
 message NotifyRequest{

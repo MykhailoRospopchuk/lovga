@@ -6,7 +6,8 @@ option csharp_namespace = "LovgaCommon";
 package broker.subscriber;
 
 service Subscriber{
-  rpc Subscribe (SubscribeRequest) returns (broker.reply.Reply);
+  rpc Subscribe (SubscribeRequest) returns (broker.common.Reply);
+  rpc UnSubscribe (UnsubscribeRequest) returns (broker.common.Reply);
 }
 
 message SubscribeRequest{
@@ -14,4 +15,9 @@ message SubscribeRequest{
   int32 port = 2;
   string topic = 3;
   string id = 4;
+}
+
+message UnsubscribeRequest{
+  string topic = 1;
+  string id = 2;
 }

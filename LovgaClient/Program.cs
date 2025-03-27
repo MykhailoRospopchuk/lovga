@@ -9,18 +9,21 @@ class Program
     static async Task Main(string[] args)
     {
         Console.WriteLine("Hello, World!");
+        var subscriberId = Guid.NewGuid().ToString();
+        var topic = "bobr-topic";
+
         var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
         var client = new Subscriber.SubscriberClient(channel);
 
-        var reply = client.Subscribe(new SubscribeRequest
+        var subscribeReply = client.Subscribe(new SubscribeRequest
         {
             Host = "localhost",
             Port = 7080,
-            Topic = "bobr-topic",
-            Id = Guid.NewGuid().ToString()
+            Topic = topic,
+            Id = subscriberId
         });
 
-        if (!reply.Success)
+        if (!subscribeReply.Success)
         {
             Console.WriteLine("Error");
             return;
@@ -37,6 +40,18 @@ class Program
         while (true)
         {
             await Task.Delay(1000);
+        }
+
+        var unsubscribeReply = client.UnSubscribe(new UnsubscribeRequest
+        {
+            Topic = topic,
+            Id = subscriberId
+        });
+
+        if (!unsubscribeReply.Success)
+        {
+            Console.WriteLine("Error");
+            return;
         }
     }
 }
