@@ -13,13 +13,16 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
     private readonly ILogger<ConsumerGrpcClient> _logger;
     private Channel _channel;
 
-    public ConsumerGrpcClient(string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
+    public ConsumerGrpcClient(string id, string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
     {
+        Id = id;
         _host = host;
         _port = port;
         _topic = topic;
         _logger = logger;
     }
+
+    public string Id { get; }
 
     public bool InitChannel()
     {
@@ -43,7 +46,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
         {
             // TODO: need figure out how handle this case
             _logger.LogError($"Invalid topic {_topic}");
-            throw new ArgumentException($"Invalid topic {_topic}");
+            return false;
         }
 
         try

@@ -22,7 +22,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
         _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
 
         var logger = _loggerFactory.CreateLogger<ConsumerGrpcClient>();
-        var consumer = new ConsumerGrpcClient(request.Host, request.Port, request.Topic, logger);
+        var consumer = new ConsumerGrpcClient(request.Id, request.Host, request.Port, request.Topic, logger);
 
         if (!consumer.InitChannel())
         {
