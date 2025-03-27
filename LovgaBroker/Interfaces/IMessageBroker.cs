@@ -7,6 +7,7 @@ public interface IMessageBroker
 {
     string Topic { get; }
     ValueTask EnqueueMessage(Message message);
-    void Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
+    bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
+    bool Unsubscribe(string subscriberId);
     Task DispatchAsync(CancellationToken cancellationToken);
 }

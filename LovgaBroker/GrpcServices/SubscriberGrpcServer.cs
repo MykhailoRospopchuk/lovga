@@ -7,12 +7,12 @@ using LovgaCommon;
 public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberGrpcServer> _logger;
-    private readonly IBrokerManager _broker;
+    private readonly IBrokerManager _brokerManager;
     private readonly ILoggerFactory _loggerFactory;
 
-    public SubscriberGrpcServer(IBrokerManager broker, ILogger<SubscriberGrpcServer> logger, ILoggerFactory loggerFactory)
+    public SubscriberGrpcServer(IBrokerManager brokerManager, ILogger<SubscriberGrpcServer> logger, ILoggerFactory loggerFactory)
     {
-        _broker = broker;
+        _brokerManager = brokerManager;
         _logger = logger;
         _loggerFactory = loggerFactory;
     }
@@ -32,11 +32,23 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
             });
         }
 
-        var broker = _broker.GetBroker(request.Topic);
-        broker.Subscribe(request.Id, consumer);
+        var broker = _brokerManager.GetBroker(request.Topic);
+        var result = broker.Subscribe(request.Id, consumer);
         return Task.FromResult(new Reply
         {
-            Success = true,
+            Success = result,
+        });
+    }
+
+    public override Task<Reply> UnSubscribe(UnsubscribeRequest request, ServerCallContext context)
+    {
+        _logger.LogInformation($"Un Subscribe from gRPC. Topic: {request.Topic}. Id: {request.Id}");
+        var broker = _brokerManager.GetBroker(request.Topic);
+        var result = broker.Unsubscribe(request.Id);
+
+        return Task.FromResult(new Reply
+        {
+            Success = result,
         });
     }
 }

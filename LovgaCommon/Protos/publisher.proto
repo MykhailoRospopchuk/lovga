@@ -6,7 +6,7 @@ option csharp_namespace = "LovgaCommon";
 package broker.publisher;
 
 service Publisher{
-  rpc Publish (PublishRequest) returns (broker.reply.Reply);
+  rpc Publish (PublishRequest) returns (broker.common.Reply);
 }
 
 message PublishRequest{

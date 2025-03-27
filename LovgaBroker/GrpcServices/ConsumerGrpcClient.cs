@@ -11,7 +11,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
     private readonly int _port;
     private readonly string _topic;
     private readonly ILogger<ConsumerGrpcClient> _logger;
-    private Channel _channel;
+    private Channel? _channel;
 
     public ConsumerGrpcClient(string id, string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
     {
@@ -42,6 +42,11 @@ public class ConsumerGrpcClient : IConsumerGrpcClient
     // TODO: handle when consumer unpredicted shut down
     public async Task<bool> DeliverMessage(Message message) 
     {
+        if (_channel is null)
+        {
+            throw new InvalidOperationException("Channel is not initialized");
+        }
+
         if (message.Topic != _topic)
         {
             // TODO: need figure out how handle this case

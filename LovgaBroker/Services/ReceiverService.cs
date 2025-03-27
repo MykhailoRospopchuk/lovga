@@ -7,12 +7,12 @@ using Models;
 public class ReceiverService : IReceiver
 {
     private readonly Channel<Message> _messages = Channel.CreateUnbounded<Message>();
-    private readonly IBrokerManager _broker;
+    private readonly IBrokerManager _brokerManager;
     private readonly ILogger<ReceiverService> _logger;
 
-    public ReceiverService(IBrokerManager broker, ILogger<ReceiverService> logger)
+    public ReceiverService(IBrokerManager brokerManager, ILogger<ReceiverService> logger)
     {
-        _broker = broker;
+        _brokerManager = brokerManager;
         _logger = logger;
     }
 
@@ -25,7 +25,7 @@ public class ReceiverService : IReceiver
     {
         await foreach (var message in _messages.Reader.ReadAllAsync(cancellationToken))
         {
-            var broker = _broker.GetBroker(message.Topic);
+            var broker = _brokerManager.GetBroker(message.Topic);
             await broker.EnqueueMessage(message);
         }
     }

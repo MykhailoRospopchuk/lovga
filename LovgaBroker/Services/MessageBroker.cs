@@ -27,13 +27,20 @@ public class MessageBroker : IMessageBroker
         return _queues.Writer.WriteAsync(message);
     }
 
-    public void Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
+    public bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
     {
-        _subscribers.TryAdd(subscriberId, consumerGrpcClient);
-        if (_subscribers.Count == 1)
+        var result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
+        if (_subscribers.Count == 1 && result)
         {
             _subscriberSignal.Release();
         }
+
+        return result;
+    }
+
+    public bool Unsubscribe(string subscriberId)
+    {
+        return _subscribers.TryRemove(subscriberId, out _);
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)

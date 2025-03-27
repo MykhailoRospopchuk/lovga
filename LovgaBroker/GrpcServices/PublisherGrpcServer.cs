@@ -1,7 +1,6 @@
 namespace LovgaBroker.GrpcServices;
 
 using Grpc.Core;
-using Interfaces;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
 using Models;
@@ -26,7 +25,7 @@ public class PublisherGrpcServer : Publisher.PublisherBase
             Content = request.Content,
             CreatedAt = DateTime.UtcNow
         });
-        
+
         return Task.FromResult(new Reply
         {
             Success = true,
