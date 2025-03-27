@@ -40,7 +40,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         return true;
     }
 
-    // TODO: handle when consumer unpredicted shut down
     public async Task<bool> DeliverMessage(Message message) 
     {
         if (_channel is null)

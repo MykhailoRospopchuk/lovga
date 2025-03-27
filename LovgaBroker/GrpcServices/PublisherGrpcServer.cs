@@ -22,8 +22,7 @@ public class PublisherGrpcServer : Publisher.PublisherBase
         _receiver.Publish(new Message
         {
             Topic = request.Topic,
-            Content = request.Content,
-            CreatedAt = DateTime.UtcNow
+            Content = request.Content
         });
 
         return Task.FromResult(new Reply
