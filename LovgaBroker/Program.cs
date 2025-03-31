@@ -25,8 +25,9 @@ public class Program
 
         var host = builder.Build();
 
-        var subscriber = host.Services.GetRequiredService<SubscriberGrpcServer>();
-        var publisher = host.Services.GetRequiredService<PublisherGrpcServer>();
+        using var scope = host.Services.CreateAsyncScope();
+        var subscriber = scope.ServiceProvider.GetRequiredService<SubscriberGrpcServer>();
+        var publisher = scope.ServiceProvider.GetRequiredService<PublisherGrpcServer>();
 
         Server grpcServer = new Server
         {

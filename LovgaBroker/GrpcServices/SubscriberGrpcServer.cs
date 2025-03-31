@@ -8,21 +8,25 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberGrpcServer> _logger;
     private readonly IBrokerManager _brokerManager;
-    private readonly ILoggerFactory _loggerFactory;
+    private readonly IServiceProvider _serviceProvider;
 
-    public SubscriberGrpcServer(IBrokerManager brokerManager, ILogger<SubscriberGrpcServer> logger, ILoggerFactory loggerFactory)
+    public SubscriberGrpcServer(
+        IBrokerManager brokerManager,
+        ILogger<SubscriberGrpcServer> logger,
+        IServiceProvider serviceProvider)
     {
         _brokerManager = brokerManager;
         _logger = logger;
-        _loggerFactory = loggerFactory;
+        _serviceProvider = serviceProvider;
     }
 
     public override Task<Reply> Subscribe(SubscribeRequest request, ServerCallContext context)
     {
         _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
 
-        var logger = _loggerFactory.CreateLogger<ConsumerGrpcClient>();
-        var consumer = new ConsumerGrpcClient(request.Id, request.Host, request.Port, request.Topic, logger);
+        var logger = _serviceProvider.GetRequiredService<ILogger<ConsumerGrpcClient>>();
+        var receiver = _serviceProvider.GetRequiredService<IReceiver>();
+        var consumer = new ConsumerGrpcClient(request.Id, request.Host, request.Port, request.Topic, receiver, logger);
 
         if (!consumer.InitChannel())
         {
@@ -34,6 +38,12 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
         var broker = _brokerManager.GetBroker(request.Topic);
         var result = broker.Subscribe(request.Id, consumer);
+
+        if (!result)
+        {
+            consumer.Dispose();
+        }
+
         return Task.FromResult(new Reply
         {
             Success = result,

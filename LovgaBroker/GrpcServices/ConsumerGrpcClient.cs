@@ -2,6 +2,7 @@ namespace LovgaBroker.GrpcServices;
 
 using Grpc.Core;
 using Interfaces;
+using LovgaBroker.Interfaces;
 using LovgaCommon;
 using Models;
 
@@ -11,18 +12,26 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     private readonly int _port;
     private readonly string _topic;
     private readonly ILogger<ConsumerGrpcClient> _logger;
+    private readonly IReceiver _receiver;
     private Channel? _channel;
     private bool _disposed;
 
     public string Id { get; }
 
-    public ConsumerGrpcClient(string id, string host, int port, string topic, ILogger<ConsumerGrpcClient> logger)
+    public ConsumerGrpcClient(
+        string id,
+        string host,
+        int port,
+        string topic,
+        IReceiver receiver,
+        ILogger<ConsumerGrpcClient> logger)
     {
         Id = id;
         _host = host;
         _port = port;
         _topic = topic;
         _logger = logger;
+        _receiver = receiver;
     }
 
     public bool InitChannel()
@@ -49,8 +58,8 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
         if (message.Topic != _topic)
         {
-            // TODO: need figure out how handle this case
             _logger.LogError($"Invalid topic {_topic}");
+            await EnqueueDeadMessage(message);
             return false;
         }
 
@@ -66,6 +75,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             if (!reply.Success)
             {
                 _logger.LogError("Error. Consumer failed to notify");
+                await EnqueueDeadMessage(message);
             }
 
             return true;
@@ -73,6 +83,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         catch (Exception e)
         {
             _logger.LogError(e.Message);
+            await EnqueueDeadMessage(message);
             return false;
         }
     }
@@ -80,6 +91,16 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     public void Dispose()
     {
         Dispose(true);
+    }
+
+    private ValueTask EnqueueDeadMessage(Message message)
+    {
+        return _receiver.Publish(new Message
+        {
+            Topic = "dead-letter",
+            Content = message.Content,
+            CreatedAt = message.CreatedAt
+        });
     }
 
     protected virtual void Dispose(bool disposing)

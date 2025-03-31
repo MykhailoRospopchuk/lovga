@@ -11,6 +11,7 @@ class Program
         Console.WriteLine("Hello, World!");
         var subscriberId = Guid.NewGuid().ToString();
         var topic = "bobr-topic";
+        // var topic = "dead-letter";
 
         var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
         var client = new Subscriber.SubscriberClient(channel);
@@ -37,10 +38,7 @@ class Program
 
         grpcServer.Start();
 
-        while (true)
-        {
-            await Task.Delay(1000);
-        }
+        await Task.Delay(50000);
 
         var unsubscribeReply = client.UnSubscribe(new UnsubscribeRequest
         {
@@ -52,6 +50,11 @@ class Program
         {
             Console.WriteLine("Error");
             return;
+        }
+
+        while (true)
+        {
+            await Task.Delay(1000);
         }
     }
 }

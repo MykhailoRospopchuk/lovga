@@ -8,12 +8,23 @@ using Models;
 public class PublisherGrpcServer : Publisher.PublisherBase
 {
     private readonly ILogger<PublisherGrpcServer> _logger;
-    private readonly IReceiver _receiver;
+    private IReceiver _receiver;
 
-    public PublisherGrpcServer(ILogger<PublisherGrpcServer> logger, IReceiver receiver)
+    public PublisherGrpcServer(
+        ILogger<PublisherGrpcServer> logger,
+        IReceiver receiver,
+        IServiceScopeFactory serviceScopeFactory)
     {
         _logger = logger;
         _receiver = receiver;
+
+        Initialize(serviceScopeFactory);
+    }
+
+    private void Initialize(IServiceScopeFactory serviceScopeFactory)
+    {
+        using var scope = serviceScopeFactory.CreateScope();
+        _receiver = scope.ServiceProvider.GetRequiredService<IReceiver>();
     }
 
     public override Task<Reply> Publish(PublishRequest request, ServerCallContext context)
