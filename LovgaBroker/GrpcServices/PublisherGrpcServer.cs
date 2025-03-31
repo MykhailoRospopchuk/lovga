@@ -12,19 +12,10 @@ public class PublisherGrpcServer : Publisher.PublisherBase
 
     public PublisherGrpcServer(
         ILogger<PublisherGrpcServer> logger,
-        IReceiver receiver,
-        IServiceScopeFactory serviceScopeFactory)
+        IReceiver receiver)
     {
         _logger = logger;
         _receiver = receiver;
-
-        Initialize(serviceScopeFactory);
-    }
-
-    private void Initialize(IServiceScopeFactory serviceScopeFactory)
-    {
-        using var scope = serviceScopeFactory.CreateScope();
-        _receiver = scope.ServiceProvider.GetRequiredService<IReceiver>();
     }
 
     public override Task<Reply> Publish(PublishRequest request, ServerCallContext context)
