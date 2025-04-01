@@ -4,6 +4,7 @@ using Grpc.Core;
 using Interfaces;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
+using LovgaCommon.Constants;
 using Models;
 
 public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
@@ -97,7 +98,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     {
         return _receiver.Publish(new Message
         {
-            Topic = "dead-letter",
+            Topic = QueueTopic.DeadLetterQueue,
             Content = message.Content,
             CreatedAt = message.CreatedAt
         });

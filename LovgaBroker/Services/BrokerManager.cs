@@ -23,7 +23,7 @@ public class BrokerManager : IBrokerManager
         }
 
         using var scope = _serviceScopeFactory.CreateAsyncScope();
-        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
+        using var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger<MessageBroker>();
 
         broker = new MessageBroker(topic, logger);

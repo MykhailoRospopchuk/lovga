@@ -24,4 +24,10 @@
     <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Server"/>
     <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="LovgaCommon">
+      <HintPath>..\LovgaCommon\bin\Debug\net9.0\LovgaCommon.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

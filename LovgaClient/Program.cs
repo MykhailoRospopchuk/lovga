@@ -2,6 +2,7 @@
 
 using Grpc.Core;
 using LovgaCommon;
+using LovgaCommon.Constants;
 using Services.GrpcServices;
 
 class Program
@@ -11,7 +12,7 @@ class Program
         Console.WriteLine("Hello, World!");
         var subscriberId = Guid.NewGuid().ToString();
         var topic = "bobr-topic";
-        // var topic = "dead-letter";
+        // var topic = QueueTopic.DeadLetterQueue;
 
         var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
         var client = new Subscriber.SubscriberClient(channel);
