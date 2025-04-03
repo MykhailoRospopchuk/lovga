@@ -4,6 +4,14 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>Lovga-54sd5a6a84das6a</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>LovgaSatellite</Authors>
+    <Company>Lovga_Mykhailo</Company>
+    <Product>Lovga</Product>
+    <Description>
+      This client library enables working with the shared models and other useful staff
+    </Description>
   </PropertyGroup>
 
   <ItemGroup>
