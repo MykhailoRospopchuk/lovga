@@ -23,8 +23,8 @@ public class Program
 
         app.MapPost("/subscribe", async (SubscriberGrpcClient client) =>
         {
-            var result = await client.Subscribe("bobr-topi");
-            
+            var result = await client.Subscribe("bobr-topic");
+
             return result;
         });
 
