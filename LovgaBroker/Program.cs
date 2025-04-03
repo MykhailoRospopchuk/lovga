@@ -13,6 +13,9 @@ public class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
+        // builder.Services.AddLogging(configure => configure = "[dd/MM/yy HH:mm:ss:fff] ");
+        builder.Services.AddLogging(configure => configure.AddSimpleConsole(options => options.TimestampFormat = "yyyy-MM-dd HH:mm:ss "));
+
         builder.Services.AddHostedService<GrpcServerHostedService>();
         builder.Services.AddHostedService<BrokerWorker>();
         builder.Services.AddHostedService<ReceiverWorker>();
@@ -25,7 +28,6 @@ public class Program
         builder.Services.AddSingleton<DeadLetterTopicInterceptor>();
 
         var host = builder.Build();
-
         host.Run();
     }
 }

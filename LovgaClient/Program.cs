@@ -39,19 +39,19 @@ class Program
 
         grpcServer.Start();
 
-        await Task.Delay(50000);
-
-        var unsubscribeReply = client.UnSubscribe(new UnsubscribeRequest
-        {
-            Topic = topic,
-            Id = subscriberId
-        });
-
-        if (!unsubscribeReply.Success)
-        {
-            Console.WriteLine("Error");
-            return;
-        }
+        // await Task.Delay(50000);
+        //
+        // var unsubscribeReply = client.UnSubscribe(new UnsubscribeRequest
+        // {
+        //     Topic = topic,
+        //     Id = subscriberId
+        // });
+        //
+        // if (!unsubscribeReply.Success)
+        // {
+        //     Console.WriteLine("Error");
+        //     return;
+        // }
 
         while (true)
         {

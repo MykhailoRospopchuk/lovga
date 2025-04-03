@@ -9,5 +9,6 @@ public interface IMessageBroker
     ValueTask EnqueueMessage(Message message);
     bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
     bool Unsubscribe(string subscriberId);
+    bool ConsumerExists(string subscriberId);
     Task DispatchAsync(CancellationToken cancellationToken);
 }

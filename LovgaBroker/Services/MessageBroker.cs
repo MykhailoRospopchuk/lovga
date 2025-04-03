@@ -44,6 +44,11 @@ public class MessageBroker : IMessageBroker
         return RemoveSubscriber(subscriberId);
     }
 
+    public bool ConsumerExists(string subscriberId)
+    {
+        return _subscribers.ContainsKey(subscriberId);
+    }
+
     public async Task DispatchAsync(CancellationToken cancellationToken)
     {
         int counter = 0;

@@ -24,6 +24,16 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
     {
         _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
 
+        var broker = _brokerManager.GetBroker(request.Topic);
+
+        if (broker.ConsumerExists(request.Id))
+        {
+            return Task.FromResult(new Reply
+            {
+                Success = false,
+            });
+        }
+
         var logger = _serviceProvider.GetRequiredService<ILogger<ConsumerGrpcClient>>();
         var receiver = _serviceProvider.GetRequiredService<IReceiver>();
         var consumer = new ConsumerGrpcClient(request.Id, request.Host, request.Port, request.Topic, receiver, logger);
@@ -36,9 +46,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
             });
         }
 
-        var broker = _brokerManager.GetBroker(request.Topic);
         var result = broker.Subscribe(request.Id, consumer);
-
         if (!result)
         {
             consumer.Dispose();
