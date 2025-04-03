@@ -1,0 +1,8 @@
+### POST request to example server
+POST http://localhost:5143/publish-message
+Content-Type: application/json
+
+{
+  "message": "content"
+}
+###
