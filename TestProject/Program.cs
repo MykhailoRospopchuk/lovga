@@ -1,11 +1,12 @@
 namespace TestProject;
 
 using DTO;
-using LovgaSatellite;
+using LovgaSatellite.API;
 using LovgaSatellite.GrpcClientServices;
 using LovgaSatellite.GrpcServerServices;
 using LovgaSatellite.HostedServices;
 using Microsoft.AspNetCore.Mvc;
+using Services;
 
 public class Program
 {
@@ -13,6 +14,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         Extensions.InitChannel("localhost", 8080);
+        Extensions.RegisterAction("bobr-topic", message => MessageProcessor.ProcessMessage(message));
 
         builder.Services.AddHostedService<GrpcServerHostedService>();
         builder.Services.AddScoped<PublisherGrpcClient>();

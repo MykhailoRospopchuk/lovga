@@ -70,6 +70,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
             var reply = await client.NotifyAsync(new NotifyRequest
             {
+                Topic = message.Topic,
                 Content = message.Content,
             });
 
