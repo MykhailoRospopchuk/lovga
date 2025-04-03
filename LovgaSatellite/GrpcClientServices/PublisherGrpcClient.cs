@@ -5,9 +5,8 @@ using Grpc.Core;
 using GrpcChannel;
 using LovgaCommon;
 
-public class PublisherGrpcClient : IDisposable
+public class PublisherGrpcClient
 {
-    private bool _disposed;
     private readonly Channel? _channel;
 
     public PublisherGrpcClient()
@@ -27,44 +26,16 @@ public class PublisherGrpcClient : IDisposable
             throw new ArgumentNullException(nameof(topic));
         }
 
-        try
+        var content = JsonSerializer.Serialize(message);
+
+        var client = new Publisher.PublisherClient(_channel);
+
+        var reply = await client.PublishAsync(new PublishRequest()
         {
-            var content = JsonSerializer.Serialize(message);
+            Topic = topic,
+            Content = content,
+        });
 
-            var client = new Publisher.PublisherClient(_channel);
-
-            var reply = await client.PublishAsync(new PublishRequest()
-            {
-                Topic = topic,
-                Content = content,
-            });
-
-            return reply.Success;
-        }
-        catch (Exception e)
-        {
-            return false;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (_disposed)
-            return;
-
-        if (disposing)
-        {
-            if (_channel != null)
-            {
-                _channel.ShutdownAsync().GetAwaiter().GetResult();
-            }
-        }
-
-        _disposed = true;
+        return reply.Success;
     }
 }
