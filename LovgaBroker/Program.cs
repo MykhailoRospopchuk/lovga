@@ -13,7 +13,6 @@ public class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        // builder.Services.AddLogging(configure => configure = "[dd/MM/yy HH:mm:ss:fff] ");
         builder.Services.AddLogging(configure => configure.AddSimpleConsole(options => options.TimestampFormat = "yyyy-MM-dd HH:mm:ss "));
 
         builder.Services.AddHostedService<GrpcServerHostedService>();
@@ -21,6 +20,7 @@ public class Program
         builder.Services.AddHostedService<ReceiverWorker>();
 
         builder.Services.AddSingleton<IBrokerManager, BrokerManager>();
+        builder.Services.AddSingleton<IChannelManger, ChannelManger>();
         builder.Services.AddSingleton<IReceiver, ReceiverService>();
 
         builder.Services.AddSingleton<SubscriberGrpcServer>();

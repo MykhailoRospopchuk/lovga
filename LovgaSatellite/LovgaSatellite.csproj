@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>LovgaSatellite</PackageId>
-    <Version>1.0.4</Version>
+    <Version>1.0.6</Version>
     <Authors>LovgaSatellite</Authors>
     <Company>Lovga_Mykhailo</Company>
     <Product>Lovga</Product>

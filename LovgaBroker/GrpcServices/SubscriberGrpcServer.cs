@@ -8,22 +8,23 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberGrpcServer> _logger;
     private readonly IBrokerManager _brokerManager;
+    private readonly IChannelManger _channelManager;
     private readonly IServiceProvider _serviceProvider;
 
     public SubscriberGrpcServer(
         IBrokerManager brokerManager,
         ILogger<SubscriberGrpcServer> logger,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IChannelManger channelManager)
     {
         _brokerManager = brokerManager;
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _channelManager = channelManager;
     }
 
     public override Task<Reply> Subscribe(SubscribeRequest request, ServerCallContext context)
     {
-        _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
-
         var broker = _brokerManager.GetBroker(request.Topic);
 
         if (broker.ConsumerExists(request.Id))
@@ -36,15 +37,17 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
         var logger = _serviceProvider.GetRequiredService<ILogger<ConsumerGrpcClient>>();
         var receiver = _serviceProvider.GetRequiredService<IReceiver>();
-        var consumer = new ConsumerGrpcClient(request.Id, request.Host, request.Port, request.Topic, receiver, logger);
+        var channel = _channelManager.GetChannel(request.Host, request.Port);
 
-        if (!consumer.InitChannel())
+        if (channel is null)
         {
+            _logger.LogInformation($"Channel {request.Host}:{request.Port} not found or created");
             return Task.FromResult(new Reply
             {
-                Success = false,
+                Success = true, // TODO: need investigate what to do in that case
             });
         }
+        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, channel);
 
         var result = broker.Subscribe(request.Id, consumer);
         if (!result)
@@ -52,6 +55,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
             consumer.Dispose();
         }
 
+        _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
         return Task.FromResult(new Reply
         {
             Success = result,

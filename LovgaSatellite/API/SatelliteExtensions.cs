@@ -34,7 +34,7 @@ public static class SatelliteExtensions
 
         _configuredChannel = true;
     }
-    
+
     public static void ConfigureHost(string host, int port)
     {
         ArgumentException.ThrowIfNullOrEmpty(host);
@@ -57,11 +57,11 @@ public static class SatelliteExtensions
 
     public static (string host, int port) GetHostConfiguration()
     {
-        if (ConfiguredHost)
+        if (!ConfiguredHost)
         {
             throw new InvalidOperationException("Host is not configured");
         }
-        
+
         return (_host, _port);
     }
     public static bool InitChannel()

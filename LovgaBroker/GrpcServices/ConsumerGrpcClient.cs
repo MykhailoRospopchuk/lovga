@@ -9,45 +9,28 @@ using Models;
 
 public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 {
-    private readonly string _host;
-    private readonly int _port;
-    private readonly string _topic;
-    private readonly ILogger<ConsumerGrpcClient> _logger;
-    private readonly IReceiver _receiver;
-    private Channel? _channel;
     private bool _disposed;
+
+    private readonly string _topic;
+
+    private readonly IReceiver _receiver;
+    private readonly ILogger<ConsumerGrpcClient> _logger;
+    private Channel? _channel;
 
     public string Id { get; }
 
     public ConsumerGrpcClient(
         string id,
-        string host,
-        int port,
         string topic,
         IReceiver receiver,
-        ILogger<ConsumerGrpcClient> logger)
+        ILogger<ConsumerGrpcClient> logger,
+        Channel? channel)
     {
         Id = id;
-        _host = host;
-        _port = port;
         _topic = topic;
         _logger = logger;
+        _channel = channel;
         _receiver = receiver;
-    }
-
-    public bool InitChannel()
-    {
-        try
-        {
-            _channel = new Channel(_host, _port, ChannelCredentials.Insecure);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error initializing channel");
-            return false;
-        }
-
-        return true;
     }
 
     public async Task<bool> DeliverMessage(Message message) 

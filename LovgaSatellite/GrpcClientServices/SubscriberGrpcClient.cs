@@ -7,7 +7,7 @@ using LovgaCommon;
 
 public class SubscriberGrpcClient
 {
-    private readonly string _subscriberId = Guid.NewGuid().ToString();
+    private static readonly string SubscriberId = Guid.NewGuid().ToString();
     private readonly Channel? _channel;
 
     public SubscriberGrpcClient()
@@ -36,7 +36,7 @@ public class SubscriberGrpcClient
             Host = hostConfig.host,
             Port = hostConfig.port,
             Topic = topic,
-            Id = _subscriberId
+            Id = SubscriberId
         });
 
         return reply.Success;
