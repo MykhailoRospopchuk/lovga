@@ -1,5 +1,6 @@
 namespace LovgaSatellite.HostedServices;
 
+using API;
 using Grpc.Core;
 using GrpcServerServices;
 using LovgaCommon;
@@ -17,13 +18,14 @@ public class GrpcServerHostedService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        var hostConfig = SatelliteExtensions.GetHostConfiguration();
         _grpcServer = new Server
         {
             Services =
             {
                 Consumer.BindService(_consumerGrpcServer)
             },
-            Ports = { new ServerPort("localhost", 7880, ServerCredentials.Insecure) }
+            Ports = { new ServerPort(hostConfig.host, hostConfig.port, ServerCredentials.Insecure) }
         };
         _grpcServer.Start();
 

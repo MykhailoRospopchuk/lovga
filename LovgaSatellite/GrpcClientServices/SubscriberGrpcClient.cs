@@ -1,5 +1,6 @@
 namespace LovgaSatellite.GrpcClientServices;
 
+using API;
 using Grpc.Core;
 using GrpcChannel;
 using LovgaCommon;
@@ -28,10 +29,12 @@ public class SubscriberGrpcClient
 
         var client = new Subscriber.SubscriberClient(_channel);
 
+        var hostConfig = SatelliteExtensions.GetHostConfiguration();
+
         var reply = await client.SubscribeAsync(new SubscribeRequest
         {
-            Host = "localhost",
-            Port = 7880,
+            Host = hostConfig.host,
+            Port = hostConfig.port,
             Topic = topic,
             Id = _subscriberId
         });

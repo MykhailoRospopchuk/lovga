@@ -4,8 +4,6 @@ using Grpc.Core;
 
 internal class GrpcChannelProvider
 {
-    private static string _host = string.Empty;
-    private static int _port;
     private GrpcChannelProvider() { }
 
     private static GrpcChannelProvider? _instance;
@@ -20,10 +18,8 @@ internal class GrpcChannelProvider
             {
                 if (_instance == null &&  data.HasValue && !string.IsNullOrEmpty(data.Value.host))
                 {
-                    _host = data.Value.host;
-                    _port = data.Value.port;
                     _instance = new GrpcChannelProvider();
-                    _instance.Channel = new Channel(_host, _port, ChannelCredentials.Insecure);
+                    _instance.Channel = new Channel(data.Value.host, data.Value.port, ChannelCredentials.Insecure);
                 }
             }
         }

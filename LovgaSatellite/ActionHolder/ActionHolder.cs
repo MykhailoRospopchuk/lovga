@@ -13,6 +13,11 @@ internal static class ActionHolder
         return _actions.TryAdd(topic, action);
     }
 
+    public static bool RemoveAction(string topic)
+    {
+        return _actions.Remove(topic, out _);
+    }
+
     public static Action<ActionModel>? GetAction(string topic)
     {
         return _actions.GetValueOrDefault(topic);

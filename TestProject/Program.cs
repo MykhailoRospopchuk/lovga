@@ -12,9 +12,14 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        var messageProcessor = new MessageProcessor();
+
         var builder = WebApplication.CreateBuilder(args);
-        Extensions.InitChannel("localhost", 8080);
-        Extensions.RegisterAction("bobr-topic", message => MessageProcessor.ProcessMessage(message));
+
+        SatelliteExtensions.ConfigureChannel("localhost", 8080);
+        SatelliteExtensions.ConfigureHost("localhost", 7880);
+        SatelliteExtensions.InitChannel();
+        SatelliteExtensions.RegisterAction("bobr-topic", message => messageProcessor.ProcessMessage(message));
 
         builder.Services.AddHostedService<GrpcServerHostedService>();
         builder.Services.AddScoped<PublisherGrpcClient>();
