@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>LovgaSatellite</PackageId>
-    <Version>1.0.6</Version>
+    <Version>1.0.9</Version>
     <Authors>LovgaSatellite</Authors>
     <Company>Lovga_Mykhailo</Company>
     <Product>Lovga</Product>
@@ -22,19 +22,27 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="LovgaCommon" Version="1.0.4" GeneratePathProperty="true"/>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="LovgaCommon">
-      <HintPath>..\LovgaCommon\bin\Debug\net9.0\LovgaCommon.dll</HintPath>
-    </Reference>
+    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\subscriber.proto" GrpcServices="Client"/>
+    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\consumer.proto" GrpcServices="Server"/>
+    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\publisher.proto" GrpcServices="Client"/>
+    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\common.proto" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Client"/>
-    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Server"/>
-    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Client"/>
-    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
-  </ItemGroup>
+<!--  <ItemGroup>-->
+<!--    <Reference Include="LovgaCommon">-->
+<!--      <HintPath>..\LovgaCommon\bin\Debug\net9.0\LovgaCommon.dll</HintPath>-->
+<!--    </Reference>-->
+<!--  </ItemGroup>-->
+
+<!--  <ItemGroup>-->
+<!--    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Client"/>-->
+<!--    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Server"/>-->
+<!--    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Client"/>-->
+<!--    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />-->
+<!--  </ItemGroup>-->
 </Project>

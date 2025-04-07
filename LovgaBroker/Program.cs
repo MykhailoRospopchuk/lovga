@@ -13,7 +13,12 @@ public class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
 
-        builder.Services.AddLogging(configure => configure.AddSimpleConsole(options => options.TimestampFormat = "yyyy-MM-dd HH:mm:ss "));
+        builder.Services.AddLogging(configure => 
+            configure.AddSimpleConsole(options =>
+            {
+                options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+                options.SingleLine = true;
+            }));
 
         builder.Services.AddHostedService<GrpcServerHostedService>();
         builder.Services.AddHostedService<BrokerWorker>();
