@@ -28,6 +28,8 @@ public class Program
 
         var app = builder.Build();
 
+        app.MapGet("/", () => "Hello World!");
+
         app.MapPost("/subscribe", async (SubscriberGrpcClient client) =>
         {
             var result = await client.Subscribe("bobr-topic");

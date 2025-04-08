@@ -37,7 +37,7 @@ public class GrpcServerHostedService : IHostedService
                 Subscriber.BindService(_subscriberGrpcServer),
                 Publisher.BindService(_publisherGrpcServer).Intercept(deadLetterInterceptor),
             },
-            Ports = { new ServerPort("localhost", 8080, ServerCredentials.Insecure) }
+            Ports = { new ServerPort("0.0.0.0", 8080, ServerCredentials.Insecure) }
         };
         _grpcServer.Start();
 
