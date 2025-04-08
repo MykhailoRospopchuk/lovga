@@ -11,9 +11,10 @@ The reason for this project is to learn something new by reinventing the wheel.
 
 # How to use
 
-To use broker from docker container 
-
+To use broker from docker container
+1. Create nuget from LovgaCommon inside .local_nuget directory near docker file.
+2. Prepare docker container and run:
 ```bash
-docker build . --tag broker
-docker run --name "broker" -p 8080:8080 --network host broker 
+    docker build . --tag broker
+    docker run --name "broker" -p 8080:8080 --network="host" broker 
 ```
