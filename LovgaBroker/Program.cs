@@ -13,7 +13,7 @@ public class Program
     public static void Main(string[] args)
     {
         SQLitePCL.Batteries.Init();
-        
+
         var builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.AddLogging(configure => 
@@ -43,6 +43,9 @@ public class Program
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         context.Init();
+
+        var receiver = host.Services.GetRequiredService<IReceiver>();
+        receiver.LoadStoredMessages().GetAwaiter().GetResult();
 
         host.Run();
     }

@@ -41,7 +41,21 @@ RETURNING Id;
 
     public async Task<IEnumerable<Message>> GetMessagesAsync(CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        // TODO: add batch loading
+        var query = @"
+SELECT * FROM MessageEntity;
+";
+
+        try
+        {
+            using var connection = _context.CreateConnection();
+            return await connection.QueryAsync<Message>(query, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, e.Message);
+            return [];
+        }
     }
 
     public async Task DeleteMessage(int id)

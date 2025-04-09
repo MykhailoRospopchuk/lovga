@@ -22,7 +22,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="LovgaCommon" Version="1.0.5" GeneratePathProperty="true"/>
+    <PackageReference Include="LovgaCommon" Version="1.0.5" GeneratePathProperty="true" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
   </ItemGroup>
 

@@ -39,4 +39,16 @@ public class ReceiverService : IReceiver
             await broker.EnqueueMessage(message);
         }
     }
+
+    public async Task LoadStoredMessages()
+    {
+        var messages = await _storageService.GetMessagesAsync(CancellationToken.None);
+
+        foreach (var message in messages)
+        {
+            await _messages.Writer.WriteAsync(message);
+        }
+
+        _logger.LogInformation("Loading stored messages completed");
+    }
 }
