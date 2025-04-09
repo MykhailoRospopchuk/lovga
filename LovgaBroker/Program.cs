@@ -40,12 +40,10 @@ public class Program
 
         var host = builder.Build();
 
-        // ensure database and tables exist
-        {
-            using var scope = host.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-            context.Init();
-        }
+        using var scope = host.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+        context.Init();
+
         host.Run();
     }
 }

@@ -39,6 +39,11 @@ RETURNING Id;
         }
     }
 
+    public async Task<IEnumerable<Message>> GetMessagesAsync(CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task DeleteMessage(int id)
     {
         var command = 
