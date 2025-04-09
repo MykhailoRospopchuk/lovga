@@ -6,11 +6,14 @@ using Interfaces;
 using Services;
 using Services.BackgroundServices;
 using Services.HostedServices;
+using Storage;
 
 public class Program
 {
     public static void Main(string[] args)
     {
+        SQLitePCL.Batteries.Init();
+        
         var builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.AddLogging(configure => 
@@ -32,7 +35,16 @@ public class Program
         builder.Services.AddSingleton<PublisherGrpcServer>();
         builder.Services.AddSingleton<DeadLetterTopicInterceptor>();
 
+        builder.Services.AddSingleton<DataContext>();
+
         var host = builder.Build();
+
+        // ensure database and tables exist
+        {
+            using var scope = host.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Init();
+        }
         host.Run();
     }
 }
