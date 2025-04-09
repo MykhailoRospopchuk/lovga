@@ -6,6 +6,7 @@ using LovgaBroker.Interfaces;
 using LovgaCommon;
 using LovgaCommon.Constants;
 using Models;
+using Services;
 
 public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 {
@@ -16,6 +17,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
     private Channel? _channel;
+    private readonly StorageService _storageService;
 
     public string Id { get; }
 
@@ -24,12 +26,14 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         string topic,
         IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
-        Channel? channel)
+        Channel? channel,
+        StorageService storageService)
     {
         Id = id;
         _topic = topic;
         _logger = logger;
         _channel = channel;
+        _storageService = storageService;
         _receiver = receiver;
     }
 
@@ -70,6 +74,10 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             _logger.LogError(e.Message);
             await EnqueueDeadMessage(message);
             return false;
+        }
+        finally
+        {
+            await _storageService.DeleteMessage(message.Id);
         }
     }
 

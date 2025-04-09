@@ -36,6 +36,7 @@ public class Program
         builder.Services.AddSingleton<DeadLetterTopicInterceptor>();
 
         builder.Services.AddSingleton<DataContext>();
+        builder.Services.AddTransient<StorageService>();
 
         var host = builder.Build();
 

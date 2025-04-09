@@ -3,6 +3,7 @@ namespace LovgaBroker.GrpcServices;
 using Grpc.Core;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
+using Services;
 
 public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
@@ -37,6 +38,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
         var logger = _serviceProvider.GetRequiredService<ILogger<ConsumerGrpcClient>>();
         var receiver = _serviceProvider.GetRequiredService<IReceiver>();
+        var storage = _serviceProvider.GetRequiredService<StorageService>();
         var channel = _channelManager.GetChannel(request.Host, request.Port);
 
         if (channel is null)
@@ -47,7 +49,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 Success = true, // TODO: need investigate what to do in that case
             });
         }
-        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, channel);
+        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, channel, storage);
 
         var result = broker.Subscribe(request.Id, consumer);
         if (!result)

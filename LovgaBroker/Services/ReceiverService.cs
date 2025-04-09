@@ -9,16 +9,26 @@ public class ReceiverService : IReceiver
     private readonly Channel<Message> _messages = Channel.CreateUnbounded<Message>();
     private readonly IBrokerManager _brokerManager;
     private readonly ILogger<ReceiverService> _logger;
+    private readonly StorageService _storageService;
 
-    public ReceiverService(IBrokerManager brokerManager, ILogger<ReceiverService> logger)
+    public ReceiverService(
+        IBrokerManager brokerManager,
+        ILogger<ReceiverService> logger,
+        StorageService storageService)
     {
         _brokerManager = brokerManager;
         _logger = logger;
+        _storageService = storageService;
     }
 
     public ValueTask Publish(Message message)
     {
-        return _messages.Writer.WriteAsync(message);
+        var id = _storageService.InsertMessage(message).GetAwaiter().GetResult();
+        message.SetId(id);
+
+        var result = _messages.Writer.WriteAsync(message);
+
+        return result;
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)

@@ -6,16 +6,16 @@ using Microsoft.Data.Sqlite;
 
 public class DataContext
 {
-    protected readonly IConfiguration Configuration;
+    private readonly IConfiguration _configuration;
 
     public DataContext(IConfiguration configuration)
     {
-        Configuration = configuration;
+        _configuration = configuration;
     }
 
     public IDbConnection CreateConnection()
     {
-        return new SqliteConnection(Configuration.GetConnectionString("Storage"));
+        return new SqliteConnection(_configuration.GetConnectionString("Storage"));
     }
 
     public void Init()
