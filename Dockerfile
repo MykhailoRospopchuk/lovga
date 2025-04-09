@@ -1,6 +1,6 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS nuget
 WORKDIR /nuget
-COPY [".local_nuget/", "./"]
+COPY [".local_nugets/", "./"]
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
