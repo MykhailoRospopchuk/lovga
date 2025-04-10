@@ -49,7 +49,10 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 Success = true, // TODO: need investigate what to do in that case
             });
         }
-        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, channel, storage);
+        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, storage);
+        consumer.OnRegisterConsumer += _channelManager.RegisterConsumer;
+        consumer.OnUnregisterConsumer += _channelManager.UnregisterConsumer;
+        consumer.SetUpChannel(channel);
 
         var result = broker.Subscribe(request.Id, consumer);
         if (!result)

@@ -6,8 +6,7 @@ using Interfaces;
 
 public class ChannelManger : IChannelManger
 {
-    private readonly ConcurrentDictionary<(string, int), Channel> _channels = new();
-
+    private readonly ConcurrentDictionary<string, (Channel channel, List<string> consumerId)> _channels = new();
     public Channel? GetChannel(string host, int port)
     {
         ArgumentException.ThrowIfNullOrEmpty(host);
@@ -17,23 +16,48 @@ public class ChannelManger : IChannelManger
             throw new ArgumentException("Port cannot be negative", nameof(port));
         }
 
-        if (_channels.TryGetValue((host, port), out Channel? channel))
+        var target = string.Format("{0}:{1}", host, port);
+
+        if (_channels.TryGetValue(target, out var holder))
         {
-            return channel;
+            return holder.channel;
         }
 
-        channel = new Channel(host, port, ChannelCredentials.Insecure);
+        holder = (new Channel(target, ChannelCredentials.Insecure), new List<string>());
 
-        if (_channels.TryAdd((host, port), channel))
+        if (_channels.TryAdd(target, holder))
         {
-            return channel;
+            return holder.channel;
         }
         return null;
     }
 
-    // TODO: When???? when I need to remove channel?
-    public bool RemoveChannel(string host, int port)
+    public void RegisterConsumer(string target, string consumerId)
     {
-        return _channels.TryRemove((host, port), out _);
+        if (_channels.TryGetValue(target, out var holder))
+        {
+            holder.consumerId.Add(consumerId);
+        }
+    }
+
+    public void UnregisterConsumer(string target, string consumerId)
+    {
+        if (_channels.TryGetValue(target, out var holder))
+        {
+            holder.consumerId.RemoveAll(id => id == consumerId);
+
+            if (holder.consumerId.Count == 0)
+            {
+                ShutDownChannel(target);
+            }
+        }
+    }
+
+    private void ShutDownChannel(string target)
+    {
+        if (_channels.TryRemove(target, out var holder))
+        {
+            holder.channel.ShutdownAsync().GetAwaiter().GetResult();
+        }
     }
 }

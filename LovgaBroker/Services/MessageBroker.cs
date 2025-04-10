@@ -78,7 +78,7 @@ public class MessageBroker : IMessageBroker
             }
             catch (Exception e)
             {
-                _logger.LogError(e.Message);
+                _logger.LogError(e, e.Message);
             }
             finally
             {

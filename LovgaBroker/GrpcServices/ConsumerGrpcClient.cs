@@ -20,21 +20,28 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     private readonly StorageService _storageService;
 
     public string Id { get; }
+    
+    public event Action<string, string> OnRegisterConsumer;
+    public event Action<string, string> OnUnregisterConsumer;
 
     public ConsumerGrpcClient(
         string id,
         string topic,
         IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
-        Channel? channel,
         StorageService storageService)
     {
         Id = id;
         _topic = topic;
         _logger = logger;
-        _channel = channel;
         _storageService = storageService;
         _receiver = receiver;
+    }
+
+    public void SetUpChannel(Channel channel)
+    {
+        _channel = channel;
+        OnRegisterConsumer?.Invoke(Id, channel.Target);
     }
 
     public async Task<bool> DeliverMessage(Message message) 
@@ -71,7 +78,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(e.Message);
+            _logger.LogError(e, e.Message);
             await EnqueueDeadMessage(message);
             return false;
         }
@@ -107,12 +114,12 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             {
                 try
                 {
-                    _channel.ShutdownAsync().GetAwaiter().GetResult();
-                    _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - gRPC channel shutdown successfully.");
+                    OnUnregisterConsumer?.Invoke(Id, _channel.Target);
+                    _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - unregister from gRPC channel successfully.");
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, $"Error shutting down gRPC channel Consumer ID: {Id} Topic: {_topic}");
+                    _logger.LogError(e, $"Error unregistering from gRPC channel Consumer ID: {Id} Topic: {_topic}");
                 }
             }
         }
