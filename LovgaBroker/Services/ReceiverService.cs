@@ -42,9 +42,9 @@ public class ReceiverService : IReceiver
 
     public async Task LoadStoredMessages()
     {
-        var messages = await _storageService.GetMessagesAsync(CancellationToken.None);
+        var chunk = _storageService.GetChunkMessagesAsync();
 
-        foreach (var message in messages)
+        await foreach (var message in chunk)
         {
             await _messages.Writer.WriteAsync(message);
         }

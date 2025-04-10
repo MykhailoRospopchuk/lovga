@@ -39,22 +39,46 @@ RETURNING Id;
         }
     }
 
-    public async Task<IEnumerable<Message>> GetMessagesAsync(CancellationToken cancellationToken)
+    public async IAsyncEnumerable<Message> GetChunkMessagesAsync()
     {
-        // TODO: add batch loading
         var query = @"
-SELECT * FROM MessageEntity;
+SELECT * FROM MessageEntity
+WHERE Id > @LastId
+ORDER BY Id
+LIMIT @Limit;
 ";
+        bool marker = true;
+        var lastId = 0;
+        var limit = 500;
+        List<Message> messages = new List<Message>(limit);
 
-        try
+        using var connection = _context.CreateConnection();
+
+        while (marker)
         {
-            using var connection = _context.CreateConnection();
-            return await connection.QueryAsync<Message>(query, cancellationToken);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, e.Message);
-            return [];
+            try
+            {
+                var result = await connection.QueryAsync<Message>(query, new
+                {
+                    LastId = lastId,
+                    Limit = limit,
+                });
+
+                messages = result.ToList();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, e.Message);
+                yield break;
+            }
+
+            marker = messages.Count == limit;
+            lastId = marker ? messages[^1].Id : 0;
+
+            foreach (var message in messages)
+            {
+                yield return message;
+            }
         }
     }
 
