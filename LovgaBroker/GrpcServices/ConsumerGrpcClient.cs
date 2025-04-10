@@ -20,7 +20,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     private readonly StorageService _storageService;
 
     public string Id { get; }
-    
+
     public event Action<string, string> OnRegisterConsumer;
     public event Action<string, string> OnUnregisterConsumer;
 

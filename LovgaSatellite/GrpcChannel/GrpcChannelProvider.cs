@@ -26,5 +26,13 @@ internal class GrpcChannelProvider
         return _instance;
     }
 
+    public void ThrowIfChannelNull()
+    {
+        if (_instance?.Channel is null)
+        {
+            throw new NullReferenceException("Channel is not initialized");
+        }
+    }
+
     public Channel? Channel { get; set; }
 }

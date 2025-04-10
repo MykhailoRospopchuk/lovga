@@ -37,6 +37,13 @@ public class Program
             return result;
         });
 
+        app.MapPost("/unsubscribe", async (SubscriberGrpcClient client) =>
+        {
+            var result = await client.Unsubscribe("bobr-topic");
+
+            return result;
+        });
+
         app.MapPost("/publish-message", async (PublisherGrpcClient client, [FromBody] PublishMessageRequestDTO message) =>
         {
             var result = await client.PublishMessage($"{DateTime.UtcNow} - {message.Message}", "bobr-topic");
