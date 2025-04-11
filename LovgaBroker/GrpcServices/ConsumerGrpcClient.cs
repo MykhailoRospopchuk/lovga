@@ -10,36 +10,32 @@ using Services;
 
 public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 {
+    public string Id { get; private set; }
     private bool _disposed;
-
-    private readonly string _topic;
+    private string _topic;
 
     private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
     private Channel? _channel;
     private readonly StorageService _storageService;
 
-    public string Id { get; }
-
     public event Action<string, string> OnRegisterConsumer;
     public event Action<string, string> OnUnregisterConsumer;
 
     public ConsumerGrpcClient(
-        string id,
-        string topic,
         IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
         StorageService storageService)
     {
-        Id = id;
-        _topic = topic;
         _logger = logger;
         _storageService = storageService;
         _receiver = receiver;
     }
 
-    public void SetUpChannel(Channel channel)
+    public void SetUpConsumer(Channel channel, string id, string topic)
     {
+        Id = id;
+        _topic = topic;
         _channel = channel;
         OnRegisterConsumer?.Invoke(Id, channel.Target);
     }

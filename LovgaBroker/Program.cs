@@ -2,6 +2,7 @@ namespace LovgaBroker;
 
 using GrpcServices;
 using GrpcServices.Interceptors;
+using GrpcServices.Interfaces;
 using Interfaces;
 using Services;
 using Services.BackgroundServices;
@@ -34,6 +35,8 @@ public class Program
         builder.Services.AddSingleton<SubscriberGrpcServer>();
         builder.Services.AddSingleton<PublisherGrpcServer>();
         builder.Services.AddSingleton<DeadLetterTopicInterceptor>();
+
+        builder.Services.AddTransient<IConsumerGrpcClient, ConsumerGrpcClient>();
 
         builder.Services.AddSingleton<DataContext>();
         builder.Services.AddTransient<StorageService>();

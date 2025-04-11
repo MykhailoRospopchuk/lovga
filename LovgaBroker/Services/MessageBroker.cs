@@ -2,7 +2,6 @@ namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using GrpcServices;
 using GrpcServices.Interfaces;
 using Interfaces;
 using Models;
@@ -92,13 +91,10 @@ public class MessageBroker : IMessageBroker
 
     private bool RemoveSubscriber(string subscriberId)
     {
-        if (_subscribers.TryRemove(subscriberId, out IConsumerGrpcClient? existConsumer))
+        if (_subscribers.TryRemove(subscriberId, out _))
         {
-            if (existConsumer is ConsumerGrpcClient cgClient)
-            {
-                cgClient.Dispose();
-                return true;
-            }
+            _logger.LogInformation($"Subscriber ID: {subscriberId} removed from {Topic} in MessageBroker");
+            return true;
         }
 
         return false;

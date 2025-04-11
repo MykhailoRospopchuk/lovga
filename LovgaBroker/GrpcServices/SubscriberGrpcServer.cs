@@ -1,9 +1,9 @@
 namespace LovgaBroker.GrpcServices;
 
 using Grpc.Core;
+using Interfaces;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
-using Services;
 
 public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
@@ -35,10 +35,6 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 Success = false,
             });
         }
-
-        var logger = _serviceProvider.GetRequiredService<ILogger<ConsumerGrpcClient>>();
-        var receiver = _serviceProvider.GetRequiredService<IReceiver>();
-        var storage = _serviceProvider.GetRequiredService<StorageService>();
         var channel = _channelManager.GetChannel(request.Host, request.Port);
 
         if (channel is null)
@@ -46,21 +42,18 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
             _logger.LogInformation($"Channel {request.Host}:{request.Port} not found or created");
             return Task.FromResult(new Reply
             {
-                Success = true, // TODO: need investigate what to do in that case
+                Success = false
             });
         }
-        var consumer = new ConsumerGrpcClient(request.Id, request.Topic, receiver, logger, storage);
+
+        var consumer = _serviceProvider.GetRequiredService<IConsumerGrpcClient>();
         consumer.OnRegisterConsumer += _channelManager.RegisterConsumer;
         consumer.OnUnregisterConsumer += _channelManager.UnregisterConsumer;
-        consumer.SetUpChannel(channel);
+        consumer.SetUpConsumer(channel, request.Id, request.Topic);
 
         var result = broker.Subscribe(request.Id, consumer);
-        if (!result)
-        {
-            consumer.Dispose();
-        }
 
-        _logger.LogInformation($"Subscribe from gRPC. Topic: {request.Topic}. Host: {request.Host}. Port: {request.Port}");
+        _logger.LogInformation($"{0} attempt to subscribe. Topic: {request.Topic} Id: {request.Id}. Host: {request.Host}. Port: {request.Port}", result ? "Success" : "Failed");
         return Task.FromResult(new Reply
         {
             Success = result,
@@ -69,7 +62,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
     public override Task<Reply> UnSubscribe(UnsubscribeRequest request, ServerCallContext context)
     {
-        _logger.LogInformation($"Un Subscribe from gRPC. Topic: {request.Topic}. Id: {request.Id}");
+        _logger.LogInformation($"Attempt to Unsubscribe from gRPC. Topic: {request.Topic} Id: {request.Id}");
         var broker = _brokerManager.GetBroker(request.Topic);
         var result = broker.Unsubscribe(request.Id);
 
