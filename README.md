@@ -12,9 +12,23 @@ The reason for this project is to learn something new by reinventing the wheel.
 # How to use
 
 To use broker from docker container
-1. Create nuget from LovgaCommon inside .local_nuget directory near docker file.
-2. Prepare docker container and run:
+1. The folder tree should look like this:
+```bash
+./lovga
+├── .local_nuget
+├── .storage_database
+├── LovgaBroker
+├── LovgaClient
+├── LovgaCommon
+├── LovgaPublisher
+├── LovgaSatellite
+└── TestProject
+```
+2. Create nuget from LovgaCommon inside .local_nuget directory near docker file.
+3. Prepare docker container and run:
 ```bash
     docker build . --tag broker
-    docker run --name "broker" -p 8080:8080 --network="host" broker 
+    docker run --name "broker" -p 8080:8080 --network="host" -v /home/mykhailo/dev/pet/lovga/lovga/.storage_database:/.storage_database broker
 ```
+*/home/mykhailo/dev/pet/lovga* - you must put your own path
+
