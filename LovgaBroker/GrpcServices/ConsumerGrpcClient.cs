@@ -1,6 +1,5 @@
 namespace LovgaBroker.GrpcServices;
 
-using Grpc.Core;
 using Interfaces;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
@@ -13,10 +12,13 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     public string Id { get; private set; }
     private bool _disposed;
     private string _topic;
+    private string _host;
+    private int _port;
+    private string _hostPort = string.Empty;
 
     private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
-    private Channel? _channel;
+    private IChannelManger? _channelManger;
     private readonly StorageService _storageService;
 
     public event Action<string, string> OnRegisterConsumer;
@@ -25,26 +27,30 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     public ConsumerGrpcClient(
         IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
-        StorageService storageService)
+        StorageService storageService,
+        IChannelManger? channelManger)
     {
         _logger = logger;
         _storageService = storageService;
+        _channelManger = channelManger;
         _receiver = receiver;
     }
 
-    public void SetUpConsumer(Channel channel, string id, string topic)
+    public void SetUpConsumer(string id, string topic, string host, int port)
     {
         Id = id;
         _topic = topic;
-        _channel = channel;
-        OnRegisterConsumer?.Invoke(Id, channel.Target);
+        _host = host;
+        _port = port;
+        _hostPort = string.Format("{0}:{1}", host, port);
+        OnRegisterConsumer?.Invoke(_hostPort, Id);
     }
 
     public async Task<bool> DeliverMessage(Message message) 
     {
-        if (_channel is null)
+        if (_channelManger is null)
         {
-            throw new InvalidOperationException("Channel is not initialized");
+            throw new ArgumentNullException("ChannelManager is not initialized");
         }
 
         if (message.Topic != _topic)
@@ -54,9 +60,16 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             return false;
         }
 
+        var channel = _channelManger?.GetChannel(_host, _port);
+
+        if (channel is null)
+        {
+            throw new ArgumentNullException("Channel is not initialized");
+        }
+
         try
         {
-            var client = new Consumer.ConsumerClient(_channel);
+            var client = new Consumer.ConsumerClient(channel);
 
             var reply = await client.NotifyAsync(new NotifyRequest
             {
@@ -106,11 +119,11 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
         if (disposing)
         {
-            if (_channel != null)
+            if (_channelManger != null)
             {
                 try
                 {
-                    OnUnregisterConsumer?.Invoke(Id, _channel.Target);
+                    OnUnregisterConsumer?.Invoke(_hostPort, Id);
                     _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - unregister from gRPC channel successfully.");
                 }
                 catch (Exception e)

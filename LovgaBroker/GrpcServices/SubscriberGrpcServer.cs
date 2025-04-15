@@ -35,9 +35,9 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 Success = false,
             });
         }
-        var channel = _channelManager.GetChannel(request.Host, request.Port);
+        var channel = _channelManager.ChannelExists(request.Host, request.Port);
 
-        if (channel is null)
+        if (!channel)
         {
             _logger.LogInformation($"Channel {request.Host}:{request.Port} not found or created");
             return Task.FromResult(new Reply
@@ -49,7 +49,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
         var consumer = _serviceProvider.GetRequiredService<IConsumerGrpcClient>();
         consumer.OnRegisterConsumer += _channelManager.RegisterConsumer;
         consumer.OnUnregisterConsumer += _channelManager.UnregisterConsumer;
-        consumer.SetUpConsumer(channel, request.Id, request.Topic);
+        consumer.SetUpConsumer(request.Id, request.Topic, request.Host, request.Port);
 
         var result = broker.Subscribe(request.Id, consumer);
 

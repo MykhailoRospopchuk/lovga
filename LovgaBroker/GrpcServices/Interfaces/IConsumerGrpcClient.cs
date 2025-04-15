@@ -1,6 +1,5 @@
 namespace LovgaBroker.GrpcServices.Interfaces;
 
-using Grpc.Core;
 using Models;
 
 public interface IConsumerGrpcClient
@@ -9,6 +8,6 @@ public interface IConsumerGrpcClient
 
     event Action<string, string> OnRegisterConsumer;
     event Action<string, string> OnUnregisterConsumer;
-    void SetUpConsumer(Channel channel, string id, string topic);
+    void SetUpConsumer(string id, string topic, string host, int port);
     Task<bool> DeliverMessage(Message message);
 }

@@ -53,6 +53,15 @@ public class ChannelManger : IChannelManger
         }
     }
 
+    public bool ChannelExists(string host, int port)
+    {
+        if (_channels.TryGetValue(string.Format("{0}:{1}", host, port), out var holder))
+        {
+            return holder.channel.State != ChannelState.Shutdown;
+        }
+        return false;
+    }
+
     private void ShutDownChannel(string target)
     {
         if (_channels.TryRemove(target, out var holder))
