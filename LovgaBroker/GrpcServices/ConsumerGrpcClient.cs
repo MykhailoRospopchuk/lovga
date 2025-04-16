@@ -16,7 +16,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
     private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
-    private IChannelManger? _channelManger;
+    private readonly IChannelManger _channelManger;
     private readonly StorageService _storageService;
 
     public event Action<string, string> OnRegisterConsumer;
@@ -26,7 +26,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
         StorageService storageService,
-        IChannelManger? channelManger)
+        IChannelManger channelManger)
     {
         _logger = logger;
         _storageService = storageService;
@@ -44,11 +44,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
     public async Task<bool> DeliverMessage(Message message) 
     {
-        if (_channelManger is null)
-        {
-            throw new ArgumentNullException("ChannelManager is not initialized");
-        }
-
         if (message.Topic != _topic)
         {
             _logger.LogError($"Invalid topic {_topic}");
