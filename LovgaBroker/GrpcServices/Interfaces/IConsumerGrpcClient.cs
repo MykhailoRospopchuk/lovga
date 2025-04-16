@@ -8,6 +8,6 @@ public interface IConsumerGrpcClient
 
     event Action<string, string> OnRegisterConsumer;
     event Action<string, string> OnUnregisterConsumer;
-    void SetUpConsumer(string id, string topic, string host, int port);
+    void SetUpConsumer(string id, string topic, string target);
     Task<bool> DeliverMessage(Message message);
 }

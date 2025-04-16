@@ -7,17 +7,8 @@ using Interfaces;
 public class ChannelManger : IChannelManger
 {
     private readonly ConcurrentDictionary<string, (Channel channel, List<string> consumerId)> _channels = new();
-    public Channel? GetChannel(string host, int port)
+    public Channel? GetChannel(string target)
     {
-        ArgumentException.ThrowIfNullOrEmpty(host);
-
-        if (port < 0)
-        {
-            throw new ArgumentException("Port cannot be negative", nameof(port));
-        }
-
-        var target = string.Format("{0}:{1}", host, port);
-
         if (_channels.TryGetValue(target, out var holder))
         {
             return holder.channel;
@@ -53,9 +44,9 @@ public class ChannelManger : IChannelManger
         }
     }
 
-    public bool ChannelExists(string host, int port)
+    public bool ChannelExists(string target)
     {
-        if (_channels.TryGetValue(string.Format("{0}:{1}", host, port), out var holder))
+        if (_channels.TryGetValue(target, out var holder))
         {
             return holder.channel.State != ChannelState.Shutdown;
         }

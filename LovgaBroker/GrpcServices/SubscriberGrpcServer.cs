@@ -26,6 +26,15 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
     public override Task<Reply> Subscribe(SubscribeRequest request, ServerCallContext context)
     {
+        ArgumentException.ThrowIfNullOrEmpty(request.Host);
+        ArgumentException.ThrowIfNullOrEmpty(request.Id);
+        ArgumentException.ThrowIfNullOrEmpty(request.Topic);
+
+        if (request.Port < 0)
+        {
+            throw new ArgumentException("Port cannot be negative", nameof(request.Port));
+        }
+
         var broker = _brokerManager.GetBroker(request.Topic);
 
         if (broker.ConsumerExists(request.Id))
@@ -35,7 +44,9 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 Success = false,
             });
         }
-        var channel = _channelManager.ChannelExists(request.Host, request.Port);
+
+        var target = $"{request.Host}:{request.Port}";
+        var channel = _channelManager.ChannelExists(target);
 
         if (!channel)
         {
@@ -49,7 +60,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
         var consumer = _serviceProvider.GetRequiredService<IConsumerGrpcClient>();
         consumer.OnRegisterConsumer += _channelManager.RegisterConsumer;
         consumer.OnUnregisterConsumer += _channelManager.UnregisterConsumer;
-        consumer.SetUpConsumer(request.Id, request.Topic, request.Host, request.Port);
+        consumer.SetUpConsumer(request.Id, request.Topic, target);
 
         var result = broker.Subscribe(request.Id, consumer);
 

@@ -12,9 +12,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     public string Id { get; private set; }
     private bool _disposed;
     private string _topic;
-    private string _host;
-    private int _port;
-    private string _hostPort = string.Empty;
+    private string _target = string.Empty;
 
     private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
@@ -36,14 +34,12 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         _receiver = receiver;
     }
 
-    public void SetUpConsumer(string id, string topic, string host, int port)
+    public void SetUpConsumer(string id, string topic, string target)
     {
         Id = id;
         _topic = topic;
-        _host = host;
-        _port = port;
-        _hostPort = string.Format("{0}:{1}", host, port);
-        OnRegisterConsumer?.Invoke(_hostPort, Id);
+        _target = target;
+        OnRegisterConsumer?.Invoke(_target, Id);
     }
 
     public async Task<bool> DeliverMessage(Message message) 
@@ -60,7 +56,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             return false;
         }
 
-        var channel = _channelManger?.GetChannel(_host, _port);
+        var channel = _channelManger?.GetChannel(_target);
 
         if (channel is null)
         {
@@ -123,7 +119,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             {
                 try
                 {
-                    OnUnregisterConsumer?.Invoke(_hostPort, Id);
+                    OnUnregisterConsumer?.Invoke(_target, Id);
                     _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - unregister from gRPC channel successfully.");
                 }
                 catch (Exception e)
