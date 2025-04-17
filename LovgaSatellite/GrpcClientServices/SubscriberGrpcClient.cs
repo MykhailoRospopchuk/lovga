@@ -7,6 +7,7 @@ using LovgaCommon;
 public class SubscriberGrpcClient
 {
     private static readonly string SubscriberId = Guid.NewGuid().ToString();
+    private static readonly HashSet<string> ActiveTopics = new ();
     private readonly GrpcChannelProvider? _channelProvider;
 
     public SubscriberGrpcClient()
@@ -26,6 +27,11 @@ public class SubscriberGrpcClient
             throw new ArgumentNullException(nameof(topic));
         }
 
+        if (ActiveTopics.Contains(topic))
+        {
+            throw new InvalidOperationException("Already subscribed");
+        }
+
         _channelProvider.ThrowIfChannelNull();
 
         var client = new Subscriber.SubscriberClient(_channelProvider.Channel);
@@ -39,6 +45,11 @@ public class SubscriberGrpcClient
             Topic = topic,
             Id = SubscriberId
         });
+
+        if (reply.Success)
+        {
+            ActiveTopics.Add(topic);
+        }
 
         return reply.Success;
     }
@@ -65,6 +76,16 @@ public class SubscriberGrpcClient
             Id = SubscriberId
         });
 
+        if (reply.Success)
+        {
+            ActiveTopics.Remove(topic);
+        }
+
         return reply.Success;
+    }
+
+    public string[] GetActiveTopics()
+    {
+        return ActiveTopics.ToArray();
     }
 }

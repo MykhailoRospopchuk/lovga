@@ -10,8 +10,8 @@ public static class SatelliteExtensions
     private static int _channelPort;
     private static bool _configuredChannel;
 
-    private static string _host = string.Empty;
-    private static int _port;
+    private static string _satelliteHost = string.Empty;
+    private static int _satellitePort;
 
     internal static bool ConfiguredHost { get; private set; }
 
@@ -49,8 +49,8 @@ public static class SatelliteExtensions
             throw new ArgumentException("Port cannot be negative", nameof(port));
         }
 
-        _host = host;
-        _port = port;
+        _satelliteHost = host;
+        _satellitePort = port;
 
         ConfiguredHost = true;
     }
@@ -62,7 +62,7 @@ public static class SatelliteExtensions
             throw new InvalidOperationException("Host is not configured");
         }
 
-        return (_host, _port);
+        return (_satelliteHost, _satellitePort);
     }
     public static bool InitChannel()
     {
