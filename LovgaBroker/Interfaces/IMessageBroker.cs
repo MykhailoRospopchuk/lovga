@@ -6,6 +6,7 @@ using Models;
 public interface IMessageBroker
 {
     string Topic { get; }
+    void SetTopic(string topic);
     ValueTask EnqueueMessage(Message message);
     bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
     bool Unsubscribe(string subscriberId);

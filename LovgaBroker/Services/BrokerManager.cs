@@ -23,10 +23,8 @@ public class BrokerManager : IBrokerManager
         }
 
         using var scope = _serviceScopeFactory.CreateAsyncScope();
-        var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger<MessageBroker>();
-
-        broker = new MessageBroker(topic, logger);
+        broker = scope.ServiceProvider.GetRequiredService<IMessageBroker>();
+        broker.SetTopic(topic);
         if (_brokers.TryAdd(topic, broker))
         {
             OnBrokerAdded?.Invoke(broker);

@@ -1,25 +1,39 @@
 namespace LovgaBroker.Services;
 
 using System.Collections.Concurrent;
+using System.Data;
 using System.Threading.Channels;
 using GrpcServices.Interfaces;
 using Interfaces;
+using LovgaCommon.Constants;
 using Models;
 
 public class MessageBroker : IMessageBroker
 {
-    public string Topic { get; }
+    public string Topic { get; private set; }
     private readonly ILogger<MessageBroker> _logger;
+    private readonly IReceiver _receiver;
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
     private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new ();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly Lock _subscriberLock = new();
 
-    public MessageBroker(string topic, ILogger<MessageBroker> logger)
+    public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver)
     {
-        Topic = topic;
         _logger = logger;
+        _receiver = receiver;
+    }
+
+    public void SetTopic(string topic)
+    {
+        if (!string.IsNullOrEmpty(Topic))
+        {
+            throw new NoNullAllowedException("Topic cannot be changed.");
+        }
+
+        ArgumentException.ThrowIfNullOrEmpty(topic);
+        Topic = topic;
     }
 
     public ValueTask EnqueueMessage(Message message)
@@ -51,6 +65,7 @@ public class MessageBroker : IMessageBroker
     public async Task DispatchAsync(CancellationToken cancellationToken)
     {
         int counter = 0;
+
         await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
             while (true)
@@ -63,6 +78,7 @@ public class MessageBroker : IMessageBroker
                 await _subscriberSignal.WaitAsync(cancellationToken);
             }
 
+            var failCount = 0;
             var keyToRemove = new List<string>();
             _logger.LogInformation($"{counter++}/{_queues.Reader.Count}");
             try
@@ -71,12 +87,14 @@ public class MessageBroker : IMessageBroker
                 {
                     if (!await handler.Value.DeliverMessage(message))
                     {
+                        ++failCount;
                         keyToRemove.Add(handler.Key);
                     }
                 }
             }
             catch (Exception e)
             {
+                ++failCount;
                 _logger.LogError(e, e.Message);
             }
             finally
@@ -84,6 +102,12 @@ public class MessageBroker : IMessageBroker
                 foreach (var key in keyToRemove)
                 {
                     RemoveSubscriber(key);
+                }
+
+                // If all message delivering failed for all consumers - then enqueue to dead queue
+                if (failCount == _subscribers.Count)
+                {
+                    await EnqueueDeadMessage(message);
                 }
             }
         }
@@ -98,5 +122,15 @@ public class MessageBroker : IMessageBroker
         }
 
         return false;
+    }
+
+    private ValueTask EnqueueDeadMessage(Message message)
+    {
+        return _receiver.Publish(new Message
+        {
+            Topic = QueueTopic.DeadLetterQueue,
+            Content = message.Content,
+            CreatedAt = message.CreatedAt
+        });
     }
 }

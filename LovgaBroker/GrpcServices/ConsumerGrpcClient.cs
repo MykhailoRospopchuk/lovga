@@ -3,7 +3,6 @@ namespace LovgaBroker.GrpcServices;
 using Interfaces;
 using LovgaBroker.Interfaces;
 using LovgaCommon;
-using LovgaCommon.Constants;
 using Models;
 using Services;
 
@@ -14,7 +13,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     private string _topic;
     private string _target = string.Empty;
 
-    private readonly IReceiver _receiver;
     private readonly ILogger<ConsumerGrpcClient> _logger;
     private readonly IChannelManger _channelManger;
     private readonly StorageService _storageService;
@@ -23,7 +21,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
     public event Action<string, string> OnUnregisterConsumer;
 
     public ConsumerGrpcClient(
-        IReceiver receiver,
         ILogger<ConsumerGrpcClient> logger,
         StorageService storageService,
         IChannelManger channelManger)
@@ -31,7 +28,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         _logger = logger;
         _storageService = storageService;
         _channelManger = channelManger;
-        _receiver = receiver;
     }
 
     public void SetUpConsumer(string id, string topic, string target)
@@ -47,7 +43,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         if (message.Topic != _topic)
         {
             _logger.LogError($"Invalid topic {_topic}");
-            await EnqueueDeadMessage(message);
             return false;
         }
 
@@ -71,7 +66,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
             if (!reply.Success)
             {
                 _logger.LogError("Error. Consumer failed to notify");
-                await EnqueueDeadMessage(message);
             }
 
             return true;
@@ -79,7 +73,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         catch (Exception e)
         {
             _logger.LogError(e, e.Message);
-            await EnqueueDeadMessage(message);
             return false;
         }
         finally
@@ -93,16 +86,6 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         Dispose(true);
     }
 
-    private ValueTask EnqueueDeadMessage(Message message)
-    {
-        return _receiver.Publish(new Message
-        {
-            Topic = QueueTopic.DeadLetterQueue,
-            Content = message.Content,
-            CreatedAt = message.CreatedAt
-        });
-    }
-
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed)
@@ -110,17 +93,14 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
         if (disposing)
         {
-            if (_channelManger != null)
+            try
             {
-                try
-                {
-                    OnUnregisterConsumer?.Invoke(_target, Id);
-                    _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - unregister from gRPC channel successfully.");
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, $"Error unregistering from gRPC channel Consumer ID: {Id} Topic: {_topic}");
-                }
+                OnUnregisterConsumer?.Invoke(_target, Id);
+                _logger.LogInformation($"Consumer ID: {Id} Topic: {_topic} - unregister from gRPC channel successfully.");
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Error unregistering from gRPC channel Consumer ID: {Id} Topic: {_topic}");
             }
         }
 

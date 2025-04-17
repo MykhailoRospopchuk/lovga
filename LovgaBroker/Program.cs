@@ -40,6 +40,7 @@ public class Program
 
         builder.Services.AddSingleton<DataContext>();
         builder.Services.AddTransient<StorageService>();
+        builder.Services.AddTransient<IMessageBroker, MessageBroker>();
 
         var host = builder.Build();
 
