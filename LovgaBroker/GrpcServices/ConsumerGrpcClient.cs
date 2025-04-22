@@ -38,7 +38,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         OnRegisterConsumer?.Invoke(_target, Id);
     }
 
-    public async Task<bool> DeliverMessage(Message message) 
+    public bool DeliverMessage(Message message) 
     {
         if (message.Topic != _topic)
         {
@@ -50,14 +50,15 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
 
         if (channel is null)
         {
-            throw new ArgumentNullException("Channel is not initialized");
+            _logger.LogError("Channel is not initialized");
+            return false;
         }
 
         try
         {
             var client = new Consumer.ConsumerClient(channel);
 
-            var reply = await client.NotifyAsync(new NotifyRequest
+            var reply = client.Notify(new NotifyRequest
             {
                 Topic = message.Topic,
                 Content = message.Content,
@@ -77,7 +78,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         }
         finally
         {
-            await _storageService.DeleteMessage(message.Id);
+            _storageService.DeleteMessage(message.Id).GetAwaiter();
         }
     }
 

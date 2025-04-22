@@ -78,23 +78,29 @@ public class MessageBroker : IMessageBroker
                 await _subscriberSignal.WaitAsync(cancellationToken);
             }
 
-            var failCount = 0;
             var keyToRemove = new List<string>();
             _logger.LogInformation($"{counter++}/{_queues.Reader.Count}");
             try
             {
+                var listTasks = new List<Task<(bool IsDelivered, string Key)>>(_subscribers.Count);
                 foreach (var handler in _subscribers)
                 {
-                    if (!await handler.Value.DeliverMessage(message))
+                    listTasks.Add(Task.Run(() =>
                     {
-                        ++failCount;
-                        keyToRemove.Add(handler.Key);
-                    }
+                        var result = handler.Value.DeliverMessage(message);
+                        return (result, handler.Key);
+                    }));
                 }
+
+                var results = await Task.WhenAll(listTasks);
+
+                keyToRemove = results
+                    .Where(t => !t.IsDelivered)
+                    .Select(t => t.Key)
+                    .ToList();
             }
             catch (Exception e)
             {
-                ++failCount;
                 _logger.LogError(e, e.Message);
             }
             finally
@@ -105,7 +111,7 @@ public class MessageBroker : IMessageBroker
                 }
 
                 // If all message delivering failed for all consumers - then enqueue to dead queue
-                if (failCount == _subscribers.Count)
+                if (keyToRemove.Count == _subscribers.Count)
                 {
                     await EnqueueDeadMessage(message);
                 }
