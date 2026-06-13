@@ -27,6 +27,7 @@ class Program
         int payloadSize = 100;
         string baseTopic = "bobr-topic";
         bool isLoadTest = true;
+        int pipeline = 1;
 
         // Command-line Argument Parsing
         for (int i = 0; i < args.Length; i++)
@@ -56,6 +57,9 @@ class Program
                     break;
                 case "--topic-base":
                     if (i + 1 < args.Length) baseTopic = args[++i];
+                    break;
+                case "--pipeline":
+                    if (i + 1 < args.Length && int.TryParse(args[++i], out var pipe)) pipeline = pipe;
                     break;
                 case "--legacy":
                     isLoadTest = false;
@@ -100,6 +104,9 @@ class Program
 
                 Console.Write($"Enter Payload Size in bytes [{payloadSize}]: ");
                 if (int.TryParse(Console.ReadLine()?.Trim(), out var valSize)) payloadSize = valSize;
+
+                Console.Write($"Enter Pipeline Depth (in-flight per worker) [{pipeline}]: ");
+                if (int.TryParse(Console.ReadLine()?.Trim(), out var valPipe)) pipeline = valPipe;
             }
         }
 
@@ -115,6 +122,7 @@ class Program
         Console.WriteLine($"[Config] Messages/worker: {messagesPerWorker} (Total: {concurrency * messagesPerWorker})");
         Console.WriteLine($"[Config] Delay: {delayMs} ms");
         Console.WriteLine($"[Config] Payload size: {payloadSize} bytes");
+        Console.WriteLine($"[Config] Pipeline depth: {pipeline}");
         if (args.Length == 0)
         {
             Console.WriteLine("\nPress any key to START load test...");
@@ -191,36 +199,43 @@ class Program
 
                 try
                 {
-                    var sw = new Stopwatch();
+                    var activeTasks = new List<Task>();
+                    var semaphore = new SemaphoreSlim(pipeline);
+
                     for (int msgSeq = 0; msgSeq < messagesPerWorker; msgSeq++)
                     {
-                        // Payload format: ticks|workerId|msgSeq|padding
                         var ticks = DateTime.UtcNow.Ticks;
                         var content = $"{ticks}|W{workerId}|S{msgSeq}|{padding}";
 
-                        sw.Restart();
-                        try
-                        {
-                            var reply = await client.PublishAsync(new PublishRequest
-                            {
-                                Topic = topic,
-                                Content = content
-                            });
+                        await semaphore.WaitAsync();
 
-                            sw.Stop();
-                            if (reply.Success)
+                        var startTime = Stopwatch.GetTimestamp();
+                        var publishTask = client.PublishAsync(new PublishRequest
+                        {
+                            Topic = topic,
+                            Content = content
+                        }).ResponseAsync;
+
+                        var continuation = publishTask.ContinueWith(t =>
+                        {
+                            semaphore.Release();
+                            var elapsedMs = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+                            if (t.Status == TaskStatus.RanToCompletion && t.Result.Success)
                             {
-                                stats.RecordSuccess(sw.Elapsed.TotalMilliseconds);
+                                stats.RecordSuccess(elapsedMs);
                             }
                             else
                             {
                                 stats.RecordFailure();
                             }
-                        }
-                        catch
+                        });
+
+                        activeTasks.Add(continuation);
+
+                        // Clean up completed tasks from activeTasks list periodically to prevent memory growth
+                        if (activeTasks.Count > pipeline * 2)
                         {
-                            sw.Stop();
-                            stats.RecordFailure();
+                            activeTasks.RemoveAll(t => t.IsCompleted);
                         }
 
                         if (delayMs > 0)
@@ -228,6 +243,8 @@ class Program
                             await Task.Delay(delayMs);
                         }
                     }
+
+                    await Task.WhenAll(activeTasks);
                 }
                 catch (Exception ex)
                 {

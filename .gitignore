@@ -404,3 +404,7 @@ FodyWeavers.xsd
 .local_nugets
 # Local slqite DB
 .storage_database
+
+# Allow committing the test result logs directory and files
+!logs/
+!logs/*

@@ -17,6 +17,19 @@ public class ReceiverWorker : BackgroundService
     {
         _logger.LogInformation("Receiver Worker is starting.");
 
+        // Load stored messages concurrently in the background so it doesn't deadlock the dispatch loop
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _receiver.LoadStoredMessages();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading stored messages on startup");
+            }
+        }, cancellationToken);
+
         await _receiver.DispatchAsync(cancellationToken);
     }
 }

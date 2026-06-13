@@ -77,14 +77,35 @@ dotnet run --project LovgaClient/LovgaClient.csproj -- --concurrency 20 --topics
 * `--topics <int>`: Number of target topics to distribute messages to (default: `5`)
 * `--messages <int>`: Number of messages to publish per concurrent worker (default: `1000`)
 * `--delay <int>`: Delay (ms) between publishes (default: `0` for max load)
+* `--pipeline <int>`: Concurrency depth / sliding window size per worker (default: `1`)
 * `--size <int>`: Payload padding size in bytes (default: `100`)
 * `--topic-base <string>`: Base name for topics (default: `bobr-topic`)
 * `--legacy`: Fallback to legacy single-publisher test mode
 
-*Example:* Publish 50,000 messages total (50 workers × 1000 messages each) across 10 topics with 100-byte payloads and no delay:
+*Example:* Publish 50,000 messages total (50 workers × 1000 messages each) across 10 topics with 100-byte payloads, pipeline depth of 10, and no delay:
 ```bash
-dotnet run --project LovgaPublisher/LovgaPublisher.csproj -- --concurrency 50 --topics 10 --messages 1000 --delay 0 --size 100
+dotnet run --project LovgaPublisher/LovgaPublisher.csproj -- --concurrency 50 --topics 10 --messages 1000 --pipeline 10 --delay 0 --size 100
 ```
+
+---
+
+## ⚡ Coordinated Multi-Process Stress Test
+
+For extreme stress testing simulating many clients and high traffic concurrently across the OS socket and thread pool, use the orchestrated stress test script.
+
+Ensure it is executable and run it:
+```bash
+chmod +x stress-test.sh
+./stress-test.sh
+```
+
+This script:
+1. Compiles the Broker, Subscriber, and Publisher in the high-performance `Release` configuration.
+2. Spawns the `LovgaBroker` in the background.
+3. Spawns 3 independent `LovgaClient` subscriber processes (30 concurrent connection streams).
+4. Spawns 3 independent `LovgaPublisher` publisher processes (30 concurrent publishers utilizing pipelining).
+5. Floods the broker with 30,000 messages total.
+6. Cleans up background processes and outputs the performance dashboards.
 
 ---
 

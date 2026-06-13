@@ -15,7 +15,11 @@ public class Program
     {
         SQLitePCL.Batteries.Init();
 
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            Args = args,
+            ContentRootPath = AppContext.BaseDirectory
+        });
 
         builder.Services.AddLogging(configure => 
             configure.AddSimpleConsole(options =>
@@ -44,9 +48,6 @@ public class Program
         using var scope = host.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<DataContext>();
         context.Init();
-
-        var receiver = host.Services.GetRequiredService<IReceiver>();
-        receiver.LoadStoredMessages().GetAwaiter().GetResult();
 
         host.Run();
     }

@@ -183,6 +183,25 @@ class Program
 
                         Interlocked.Increment(ref stats.ActiveConnections);
 
+                        var ackChannel = System.Threading.Channels.Channel.CreateUnbounded<AcknowledgeAction>();
+
+                        // Background ACK writer for this stream
+                        var ackWriterTask = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await foreach (var ackAction in ackChannel.Reader.ReadAllAsync(cts.Token))
+                                {
+                                    await call.RequestStream.WriteAsync(new ClientMessage
+                                    {
+                                        Ack = ackAction
+                                    });
+                                    stats.RecordAck();
+                                }
+                            }
+                            catch { }
+                        });
+
                         await foreach (var message in call.ResponseStream.ReadAllAsync(cts.Token))
                         {
                             // Try parsing message content to calculate latency
@@ -199,24 +218,16 @@ class Program
 
                             stats.RecordReceived(latencyMs);
 
-                            // Send ACK back
-                            try
+                            // Queue ACK write asynchronously (non-blocking)
+                            ackChannel.Writer.TryWrite(new AcknowledgeAction
                             {
-                                await call.RequestStream.WriteAsync(new ClientMessage
-                                {
-                                    Ack = new AcknowledgeAction
-                                    {
-                                        MessageId = message.MessageId,
-                                        Topic = message.Topic
-                                    }
-                                });
-                                stats.RecordAck();
-                            }
-                            catch
-                            {
-                                // ACK write failed
-                            }
+                                MessageId = message.MessageId,
+                                Topic = message.Topic
+                            });
                         }
+
+                        ackChannel.Writer.Complete();
+                        await ackWriterTask;
                     }
                     catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                     {

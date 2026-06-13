@@ -1,0 +1,177 @@
+=================================================
+          LOVGA SUBSCRIBER LOAD TESTER           
+=================================================
+
+[Config] Host: localhost:8080
+[Config] Concurrency: 10 workers
+[Config] Topics: 5 (base: 'bobr-topic')
+
+Starting subscriber automatically (arguments provided)...
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:01
+Active Clients:    10 / 10
+Messages Received: 0
+ACKs Sent:         0
+Throughput:        0.00 msg/sec
+End-to-End Latency:
+  - Average:       0.00 ms
+  - Min:           0.00 ms
+  - Max:           0.00 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:02
+Active Clients:    10 / 10
+Messages Received: 125
+ACKs Sent:         125
+Throughput:        123.06 msg/sec
+End-to-End Latency:
+  - Average:       431.05 ms
+  - Min:           93.73 ms
+  - Max:           926.00 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:03
+Active Clients:    10 / 10
+Messages Received: 290
+ACKs Sent:         290
+Throughput:        164.18 msg/sec
+End-to-End Latency:
+  - Average:       1025.75 ms
+  - Min:           93.73 ms
+  - Max:           1932.70 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:04
+Active Clients:    10 / 10
+Messages Received: 490
+ACKs Sent:         490
+Throughput:        199.93 msg/sec
+End-to-End Latency:
+  - Average:       1606.38 ms
+  - Min:           93.73 ms
+  - Max:           2931.77 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:05
+Active Clients:    10 / 10
+Messages Received: 703
+ACKs Sent:         703
+Throughput:        212.92 msg/sec
+End-to-End Latency:
+  - Average:       2151.31 ms
+  - Min:           93.73 ms
+  - Max:           3908.35 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:06
+Active Clients:    10 / 10
+Messages Received: 894
+ACKs Sent:         894
+Throughput:        190.95 msg/sec
+End-to-End Latency:
+  - Average:       2638.36 ms
+  - Min:           93.73 ms
+  - Max:           4895.25 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:07
+Active Clients:    10 / 10
+Messages Received: 2,147
+ACKs Sent:         2,147
+Throughput:        1252.71 msg/sec
+End-to-End Latency:
+  - Average:       4337.08 ms
+  - Min:           93.73 ms
+  - Max:           5821.89 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:08
+Active Clients:    10 / 10
+Messages Received: 4,767
+ACKs Sent:         4,767
+Throughput:        2619.46 msg/sec
+End-to-End Latency:
+  - Average:       5310.08 ms
+  - Min:           93.73 ms
+  - Max:           6502.44 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:09
+Active Clients:    10 / 10
+Messages Received: 7,382
+ACKs Sent:         7,382
+Throughput:        2614.42 msg/sec
+End-to-End Latency:
+  - Average:       5840.05 ms
+  - Min:           93.73 ms
+  - Max:           7208.54 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:10
+Active Clients:    10 / 10
+Messages Received: 9,911
+ACKs Sent:         9,911
+Throughput:        2528.39 msg/sec
+End-to-End Latency:
+  - Average:       6265.82 ms
+  - Min:           93.73 ms
+  - Max:           8043.31 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:11
+Active Clients:    10 / 10
+Messages Received: 12,478
+ACKs Sent:         12,478
+Throughput:        2566.20 msg/sec
+End-to-End Latency:
+  - Average:       6673.11 ms
+  - Min:           93.73 ms
+  - Max:           8688.82 ms
+=================================================
+Press Ctrl+C to stop.
+=================================================
+         LOVGA SUBSCRIBER LOAD DASHBOARD         
+=================================================
+Elapsed Time:      00:00:12
+Active Clients:    10 / 10
+Messages Received: 15,154
+ACKs Sent:         15,154
+Throughput:        2675.37 msg/sec
+End-to-End Latency:
+  - Average:       7084.40 ms
+  - Min:           93.73 ms
+  - Max:           9483.00 ms
+=================================================
+Press Ctrl+C to stop.
