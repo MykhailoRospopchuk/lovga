@@ -17,29 +17,19 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="LovgaCommon" Version="1.0.5" GeneratePathProperty="true"/>
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\subscriber.proto" GrpcServices="Server"/>
-    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\consumer.proto" GrpcServices="Client"/>
-    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\publisher.proto" GrpcServices="Server"/>
-    <Protobuf Include="$(PkgLovgaCommon)\buildTransitive\Protos\common.proto" />
+    <ProjectReference Include="..\LovgaCommon\LovgaCommon.csproj" />
   </ItemGroup>
 
-<!--  <ItemGroup>-->
-<!--    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Server"/>-->
-<!--    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Client"/>-->
-<!--    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Server"/>-->
-<!--    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />-->
-<!--  </ItemGroup>-->
-
-<!--  <ItemGroup>-->
-<!--    <Reference Include="LovgaCommon">-->
-<!--      <HintPath>..\LovgaCommon\bin\Debug\net9.0\LovgaCommon.dll</HintPath>-->
-<!--    </Reference>-->
-<!--  </ItemGroup>-->
+  <ItemGroup>
+    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Server"/>
+    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Client"/>
+    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Server"/>
+    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
+  </ItemGroup>
 </Project>

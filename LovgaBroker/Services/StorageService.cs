@@ -39,11 +39,52 @@ RETURNING Id;
         }
     }
 
+    public async Task<bool> MarkInFlight(int id)
+    {
+        var command = @"
+UPDATE MessageEntity
+SET InFlight = 1, LastDeliveredAt = @Now
+WHERE Id = @Id;
+";
+        try
+        {
+            using var connection = _context.CreateConnection();
+            var result = await connection.ExecuteAsync(command, new { Id = id, Now = DateTimeOffset.UtcNow.ToUnixTimeSeconds() });
+            return result > 0;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error marking message {Id} in flight", id);
+            return false;
+        }
+    }
+
+    public async Task<bool> ReleaseInFlight(int id)
+    {
+        var command = @"
+UPDATE MessageEntity
+SET InFlight = 0, LastDeliveredAt = 0
+WHERE Id = @Id;
+";
+        try
+        {
+            using var connection = _context.CreateConnection();
+            var result = await connection.ExecuteAsync(command, new { Id = id });
+            return result > 0;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error releasing message {Id} from in flight", id);
+            return false;
+        }
+    }
+
     public async IAsyncEnumerable<Message> GetChunkMessagesAsync()
     {
         var query = @"
 SELECT * FROM MessageEntity
-WHERE Id > @LastId
+WHERE (InFlight = 0 OR (InFlight = 1 AND LastDeliveredAt < @ExpiryThreshold))
+  AND Id > @LastId
 ORDER BY Id
 LIMIT @Limit;
 ";
@@ -58,10 +99,12 @@ LIMIT @Limit;
         {
             try
             {
+                var expiryThreshold = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 30; // 30s timeout
                 var result = await connection.QueryAsync<Message>(query, new
                 {
                     LastId = lastId,
                     Limit = limit,
+                    ExpiryThreshold = expiryThreshold
                 });
 
                 messages = result.ToList();

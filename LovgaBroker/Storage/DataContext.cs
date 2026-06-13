@@ -15,7 +15,19 @@ public class DataContext
 
     public IDbConnection CreateConnection()
     {
-        return new SqliteConnection(_configuration.GetConnectionString("Storage"));
+        var connection = new SqliteConnection(_configuration.GetConnectionString("Storage"));
+        connection.Open();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = @"
+                PRAGMA journal_mode=WAL;
+                PRAGMA synchronous=NORMAL;
+                PRAGMA temp_store=MEMORY;
+                PRAGMA busy_timeout=5000;
+            ";
+            command.ExecuteNonQuery();
+        }
+        return connection;
     }
 
     public void Init()
@@ -29,7 +41,9 @@ MessageEntity (
   Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   Topic TEXT,
   Content TEXT,
-  CreatedAt INTEGER
+  CreatedAt INTEGER,
+  InFlight INTEGER DEFAULT 0,
+  LastDeliveredAt INTEGER DEFAULT 0
 );
 ";
         connection.Execute(sql);

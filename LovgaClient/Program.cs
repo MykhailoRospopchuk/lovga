@@ -1,61 +1,72 @@
-﻿namespace LovgaClient;
+namespace LovgaClient;
 
+using System;
+using System.Threading.Tasks;
 using Grpc.Core;
 using LovgaCommon;
-using LovgaCommon.Constants;
-using Services.GrpcServices;
 
 class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("Hello, World!");
+        Console.WriteLine("Starting Lovga Client (Bi-directional Streaming)...");
         var subscriberId = Guid.NewGuid().ToString();
         var topic = "bobr-topic";
-        // var topic = QueueTopic.DeadLetterQueue;
 
         var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
         var client = new Subscriber.SubscriberClient(channel);
 
-        var subscribeReply = client.Subscribe(new SubscribeRequest
+        using var call = client.SubscribeStream();
+
+        // 1. Send Subscribe request
+        await call.RequestStream.WriteAsync(new ClientMessage
         {
-            Host = "localhost",
-            Port = 7080,
-            Topic = topic,
-            Id = subscriberId
+            Subscribe = new SubscribeAction
+            {
+                Topic = topic,
+                ConsumerId = subscriberId
+            }
         });
 
-        if (!subscribeReply.Success)
+        Console.WriteLine($"Subscribed to topic '{topic}' with ID {subscriberId}. Waiting for messages...");
+
+        // 2. Read messages from broker in a loop
+        var readTask = Task.Run(async () =>
         {
-            Console.WriteLine("Error");
-            return;
-        }
+            try
+            {
+                await foreach (var message in call.ResponseStream.ReadAllAsync())
+                {
+                    Console.WriteLine($"[Received] MsgId: {message.MessageId} Topic: {message.Topic} Content: {message.Content}");
 
-        Server grpcServer = new Server
-        {
-            Services = { Consumer.BindService(new ConsumerService()) },
-            Ports = { new ServerPort("localhost", 7080, ServerCredentials.Insecure) }
-        };
+                    // Send ACK back to the broker
+                    await call.RequestStream.WriteAsync(new ClientMessage
+                    {
+                        Ack = new AcknowledgeAction
+                        {
+                            MessageId = message.MessageId,
+                            Topic = message.Topic
+                        }
+                    });
+                    Console.WriteLine($"[ACK] MsgId: {message.MessageId} acknowledged");
+                }
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+            {
+                Console.WriteLine("Stream subscription cancelled.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading stream: {ex.Message}");
+            }
+        });
 
-        grpcServer.Start();
+        // Keep running until user terminates
+        Console.WriteLine("Press any key to exit...");
+        Console.ReadKey();
 
-        // await Task.Delay(50000);
-        //
-        // var unsubscribeReply = client.UnSubscribe(new UnsubscribeRequest
-        // {
-        //     Topic = topic,
-        //     Id = subscriberId
-        // });
-        //
-        // if (!unsubscribeReply.Success)
-        // {
-        //     Console.WriteLine("Error");
-        //     return;
-        // }
-
-        while (true)
-        {
-            await Task.Delay(1000);
-        }
+        // Clean up
+        await call.RequestStream.CompleteAsync();
+        await readTask;
     }
 }
