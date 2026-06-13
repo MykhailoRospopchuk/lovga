@@ -6,7 +6,17 @@ using Models;
 
 public class ReceiverService : IReceiver
 {
-    private readonly Channel<Message> _messages = Channel.CreateUnbounded<Message>();
+    // Bounded channel: when full, WriteAsync yields — naturally propagating back-pressure to publishers.
+    // FullMode.Wait means the gRPC publish handler will pause (not drop or throw) until space is available.
+    // SingleReader=true allows the channel to skip reader-count tracking for a small perf gain.
+    private readonly Channel<Message> _messages = Channel.CreateBounded<Message>(
+        new BoundedChannelOptions(10_000)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = false,
+        });
+
     private readonly IBrokerManager _brokerManager;
     private readonly ILogger<ReceiverService> _logger;
     private readonly StorageService _storageService;

@@ -58,7 +58,10 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         {
             var client = new Consumer.ConsumerClient(channel);
 
-            var reply = client.Notify(new NotifyRequest
+            // NotifyAsync is the truly async gRPC call — it releases the thread while the
+            // network round-trip is in flight. client.Notify() was synchronous and blocked
+            // a ThreadPool thread for the full duration (major bottleneck under any load).
+            var reply = await client.NotifyAsync(new NotifyRequest
             {
                 Topic = message.Topic,
                 Content = message.Content,
@@ -80,6 +83,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         {
             await _storageService.DeleteMessage(message.Id);
         }
+
     }
 
     public void Dispose()

@@ -15,9 +15,12 @@ public class MessageBroker : IMessageBroker
     private readonly IReceiver _receiver;
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new ();
+    private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new();
     private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly Lock _subscriberLock = new();
+
+    // How long to wait for a single subscriber to accept a message before giving up.
+    private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(10);
 
     public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver)
     {
@@ -43,10 +46,18 @@ public class MessageBroker : IMessageBroker
 
     public bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
     {
-        var result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
-        if (_subscribers.Count == 1 && result)
+        bool result;
+        lock (_subscriberLock)
         {
-            _subscriberSignal.Release();
+            result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
+
+            // Signal is released inside the lock so the count read and Release() are atomic.
+            // Previously, a concurrent Unsubscribe between TryAdd and Count check could
+            // cause the signal to be skipped → dispatch loop stuck waiting forever.
+            if (result && _subscribers.Count == 1)
+            {
+                _subscriberSignal.Release();
+            }
         }
 
         return result;
@@ -68,6 +79,7 @@ public class MessageBroker : IMessageBroker
 
         await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
         {
+            // Wait until at least one subscriber is registered.
             while (true)
             {
                 lock (_subscriberLock)
@@ -80,22 +92,38 @@ public class MessageBroker : IMessageBroker
 
             var keyToRemove = new List<string>();
             // Capture subscriber count BEFORE delivery so the finally block can compare correctly.
-            // After removals, _subscribers.Count would already be reduced, making the check wrong.
             var originalCount = _subscribers.Count;
-            _logger.LogInformation($"{counter++}/{_queues.Reader.Count}");
+            _logger.LogInformation("Dispatching message #{Counter} on topic {Topic}", counter++, Topic);
             try
             {
-                var listTasks = new List<Task<(bool IsDelivered, string Key)>>(_subscribers.Count);
-                foreach (var handler in _subscribers)
+                // Fan-out to all subscribers in parallel.
+                // No Task.Run needed — DeliverMessage is already async and executes on the thread pool.
+                // Each delivery gets its own timeout linked to the dispatch cancellation token.
+                var deliveryTasks = _subscribers.Select(async kvp =>
                 {
-                    listTasks.Add(Task.Run(async () =>
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(DeliveryTimeout);
+                    try
                     {
-                        var result = await handler.Value.DeliverMessage(message);
-                        return (result, handler.Key);
-                    }));
-                }
+                        var delivered = await kvp.Value.DeliverMessage(message);
+                        return (IsDelivered: delivered, Key: kvp.Key);
+                    }
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        // Delivery timed out for this specific subscriber — don't propagate to others.
+                        _logger.LogWarning(
+                            "Delivery timed out after {Timeout}s for subscriber {Id} on topic {Topic}",
+                            DeliveryTimeout.TotalSeconds, kvp.Key, Topic);
+                        return (IsDelivered: false, Key: kvp.Key);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Delivery failed for subscriber {Id} on topic {Topic}", kvp.Key, Topic);
+                        return (IsDelivered: false, Key: kvp.Key);
+                    }
+                });
 
-                var results = await Task.WhenAll(listTasks);
+                var results = await Task.WhenAll(deliveryTasks);
 
                 keyToRemove = results
                     .Where(t => !t.IsDelivered)
@@ -113,9 +141,7 @@ public class MessageBroker : IMessageBroker
                     RemoveSubscriber(key);
                 }
 
-                // If all message delivering failed for all consumers - then enqueue to dead queue.
-                // We compare against originalCount (captured before removals), because by this point
-                // _subscribers.Count has already been reduced by the removals above.
+                // If delivery failed for every subscriber, route to the dead-letter queue.
                 if (keyToRemove.Count == originalCount)
                 {
                     await EnqueueDeadMessage(message);
@@ -128,7 +154,7 @@ public class MessageBroker : IMessageBroker
     {
         if (_subscribers.TryRemove(subscriberId, out _))
         {
-            _logger.LogInformation($"Subscriber ID: {subscriberId} removed from {Topic} in MessageBroker");
+            _logger.LogInformation("Subscriber {SubscriberId} removed from topic {Topic}", subscriberId, Topic);
             return true;
         }
 

@@ -1,13 +1,20 @@
 namespace LovgaSatellite.GrpcClientServices;
 
+using System.Collections.Concurrent;
 using API;
 using GrpcChannel;
 using LovgaCommon;
 
 public class SubscriberGrpcClient
 {
-    private static readonly string SubscriberId = Guid.NewGuid().ToString();
-    private static readonly HashSet<string> ActiveTopics = new ();
+    // Instance-level ID: different DI-resolved instances get independent subscriber identities.
+    // Previously static, meaning ALL instances in the process shared one ID — wrong for multi-scope use.
+    private readonly string _subscriberId = Guid.NewGuid().ToString();
+
+    // ConcurrentDictionary used as a thread-safe set (byte value is unused).
+    // Previously HashSet<string> — not thread-safe, corrupts under concurrent Subscribe/Unsubscribe calls.
+    private readonly ConcurrentDictionary<string, byte> _activeTopics = new();
+
     private readonly GrpcChannelProvider? _channelProvider;
 
     public SubscriberGrpcClient()
@@ -27,7 +34,7 @@ public class SubscriberGrpcClient
             throw new ArgumentNullException(nameof(topic));
         }
 
-        if (ActiveTopics.Contains(topic))
+        if (_activeTopics.ContainsKey(topic))
         {
             throw new InvalidOperationException("Already subscribed");
         }
@@ -43,12 +50,12 @@ public class SubscriberGrpcClient
             Host = hostConfig.host,
             Port = hostConfig.port,
             Topic = topic,
-            Id = SubscriberId
+            Id = _subscriberId
         });
 
         if (reply.Success)
         {
-            ActiveTopics.Add(topic);
+            _activeTopics.TryAdd(topic, 0);
         }
 
         return reply.Success;
@@ -73,12 +80,12 @@ public class SubscriberGrpcClient
         var reply = await client.UnSubscribeAsync(new UnsubscribeRequest
         {
             Topic = topic,
-            Id = SubscriberId
+            Id = _subscriberId
         });
 
         if (reply.Success)
         {
-            ActiveTopics.Remove(topic);
+            _activeTopics.TryRemove(topic, out _);
         }
 
         return reply.Success;
@@ -86,6 +93,6 @@ public class SubscriberGrpcClient
 
     public string[] GetActiveTopics()
     {
-        return ActiveTopics.ToArray();
+        return _activeTopics.Keys.ToArray();
     }
 }

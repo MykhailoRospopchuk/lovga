@@ -49,7 +49,18 @@ public class BrokerWorker : BackgroundService
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await Task.WhenAll(_dispatchers.Values);
+        try
+        {
+            // WaitAsync respects the host's graceful shutdown deadline (default 5s).
+            // Without this, a stuck dispatcher (e.g. awaiting _subscriberSignal or a hung gRPC call)
+            // would prevent the process from ever exiting cleanly.
+            await Task.WhenAll(_dispatchers.Values).WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("BrokerWorker forced shutdown — some dispatchers were still running");
+        }
+
         _logger.LogInformation("Broker Worker is stopping");
     }
 }
