@@ -57,7 +57,9 @@ public class ChannelManger : IChannelManger
     {
         if (_channels.TryRemove(target, out var holder))
         {
-            holder.channel.ShutdownAsync().GetAwaiter().GetResult();
+            // Fire-and-forget on the thread pool — avoids blocking the gRPC handler thread.
+            // ShutdownAsync is a graceful shutdown that doesn't need the caller to wait.
+            _ = Task.Run(() => holder.channel.ShutdownAsync());
         }
     }
 }

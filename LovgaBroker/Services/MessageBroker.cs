@@ -79,15 +79,18 @@ public class MessageBroker : IMessageBroker
             }
 
             var keyToRemove = new List<string>();
+            // Capture subscriber count BEFORE delivery so the finally block can compare correctly.
+            // After removals, _subscribers.Count would already be reduced, making the check wrong.
+            var originalCount = _subscribers.Count;
             _logger.LogInformation($"{counter++}/{_queues.Reader.Count}");
             try
             {
                 var listTasks = new List<Task<(bool IsDelivered, string Key)>>(_subscribers.Count);
                 foreach (var handler in _subscribers)
                 {
-                    listTasks.Add(Task.Run(() =>
+                    listTasks.Add(Task.Run(async () =>
                     {
-                        var result = handler.Value.DeliverMessage(message);
+                        var result = await handler.Value.DeliverMessage(message);
                         return (result, handler.Key);
                     }));
                 }
@@ -110,8 +113,10 @@ public class MessageBroker : IMessageBroker
                     RemoveSubscriber(key);
                 }
 
-                // If all message delivering failed for all consumers - then enqueue to dead queue
-                if (keyToRemove.Count == _subscribers.Count)
+                // If all message delivering failed for all consumers - then enqueue to dead queue.
+                // We compare against originalCount (captured before removals), because by this point
+                // _subscribers.Count has already been reduced by the removals above.
+                if (keyToRemove.Count == originalCount)
                 {
                     await EnqueueDeadMessage(message);
                 }

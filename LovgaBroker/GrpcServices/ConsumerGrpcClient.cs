@@ -38,7 +38,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         OnRegisterConsumer?.Invoke(_target, Id);
     }
 
-    public bool DeliverMessage(Message message) 
+    public async Task<bool> DeliverMessage(Message message) 
     {
         if (message.Topic != _topic)
         {
@@ -78,7 +78,7 @@ public class ConsumerGrpcClient : IConsumerGrpcClient, IDisposable
         }
         finally
         {
-            _storageService.DeleteMessage(message.Id).GetAwaiter();
+            await _storageService.DeleteMessage(message.Id);
         }
     }
 

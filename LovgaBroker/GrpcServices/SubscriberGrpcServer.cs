@@ -64,7 +64,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 
         var result = broker.Subscribe(request.Id, consumer);
 
-        _logger.LogInformation($"{0} attempt to subscribe. Topic: {request.Topic} Id: {request.Id}. Host: {request.Host}. Port: {request.Port}", result ? "Success" : "Failed");
+        _logger.LogInformation($"{(result ? "Success" : "Failed")} attempt to subscribe. Topic: {request.Topic} Id: {request.Id}. Host: {request.Host}. Port: {request.Port}");
         return Task.FromResult(new Reply
         {
             Success = result,

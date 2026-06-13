@@ -9,6 +9,7 @@ public class BrokerWorker : BackgroundService
     private readonly IBrokerManager _brokerManager;
     private readonly ILogger<BrokerWorker> _logger;
     private readonly ConcurrentDictionary<string, Task> _dispatchers = new();
+    private CancellationToken _cancellationToken = CancellationToken.None;
 
     public BrokerWorker(IBrokerManager brokerManager, ILogger<BrokerWorker> logger)
     {
@@ -20,6 +21,7 @@ public class BrokerWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        _cancellationToken = cancellationToken;
         _logger.LogInformation("Broker Worker is starting");
 
         var brokers = _brokerManager.GetAllBrokers();
@@ -41,7 +43,8 @@ public class BrokerWorker : BackgroundService
             return;
         }
 
-        _dispatchers.TryAdd(broker.Topic, broker.DispatchAsync(CancellationToken.None));
+        // Use the stored cancellation token so graceful shutdown also stops dynamically-added brokers.
+        _dispatchers.TryAdd(broker.Topic, broker.DispatchAsync(_cancellationToken));
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

@@ -1,4 +1,4 @@
-﻿namespace LovgaPublisher;
+namespace LovgaPublisher;
 
 using Grpc.Core;
 using LovgaCommon;
@@ -43,7 +43,7 @@ class Program
                 }
                 if (!reply3.Success)
                 {
-                    Console.WriteLine("Error2");
+                    Console.WriteLine("Error3");
                 }
             }
             await Task.Delay(numbers*100);

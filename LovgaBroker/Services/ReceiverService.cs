@@ -21,14 +21,12 @@ public class ReceiverService : IReceiver
         _storageService = storageService;
     }
 
-    public ValueTask Publish(Message message)
+    public async ValueTask Publish(Message message)
     {
-        var id = _storageService.InsertMessage(message).GetAwaiter().GetResult();
+        var id = await _storageService.InsertMessage(message);
         message.SetId(id);
 
-        var result = _messages.Writer.WriteAsync(message);
-
-        return result;
+        await _messages.Writer.WriteAsync(message);
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)

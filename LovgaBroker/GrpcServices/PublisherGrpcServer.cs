@@ -18,18 +18,18 @@ public class PublisherGrpcServer : Publisher.PublisherBase
         _receiver = receiver;
     }
 
-    public override Task<Reply> Publish(PublishRequest request, ServerCallContext context)
+    public override async Task<Reply> Publish(PublishRequest request, ServerCallContext context)
     {
         _logger.LogInformation($"Published message from gRPC. Topic: {request.Topic}");
-        _receiver.Publish(new Message
+        await _receiver.Publish(new Message
         {
             Topic = request.Topic,
             Content = request.Content
         });
 
-        return Task.FromResult(new Reply
+        return new Reply
         {
             Success = true,
-        });
+        };
     }
 }

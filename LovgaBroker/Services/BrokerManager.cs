@@ -17,20 +17,14 @@ public class BrokerManager : IBrokerManager
 
     public IMessageBroker GetBroker(string topic)
     {
-        if (_brokers.TryGetValue(topic, out IMessageBroker? broker))
+        return _brokers.GetOrAdd(topic, t =>
         {
-            return broker;
-        }
-
-        using var scope = _serviceScopeFactory.CreateAsyncScope();
-        broker = scope.ServiceProvider.GetRequiredService<IMessageBroker>();
-        broker.SetTopic(topic);
-        if (_brokers.TryAdd(topic, broker))
-        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var broker = scope.ServiceProvider.GetRequiredService<IMessageBroker>();
+            broker.SetTopic(t);
             OnBrokerAdded?.Invoke(broker);
-        }
-
-        return broker;
+            return broker;
+        });
     }
 
     public IEnumerable<IMessageBroker> GetAllBrokers()
