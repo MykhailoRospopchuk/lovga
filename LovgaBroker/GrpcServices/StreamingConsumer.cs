@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Interfaces;
+using LovgaBroker.Interfaces;
 using LovgaCommon;
 using Models;
 using Services;
@@ -13,7 +14,7 @@ public class StreamingConsumer : IConsumerGrpcClient
 {
     public string Id { get; }
     private readonly IServerStreamWriter<ServerMessage> _responseStream;
-    private readonly StorageService _storageService;
+    private readonly IStorageService _storageService;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly ConcurrentDictionary<int, TaskCompletionSource<bool>> _inFlight = new();
@@ -21,7 +22,7 @@ public class StreamingConsumer : IConsumerGrpcClient
     public StreamingConsumer(
         string id,
         IServerStreamWriter<ServerMessage> responseStream,
-        StorageService storageService,
+        IStorageService storageService,
         ILogger logger)
     {
         Id = id;

@@ -13,7 +13,7 @@ public class MessageBroker : IMessageBroker
     public string Topic { get; private set; }
     private readonly ILogger<MessageBroker> _logger;
     private readonly IReceiver _receiver;
-    private readonly StorageService _storageService;
+    private readonly IStorageService _storageService;
 
     private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
     private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new();
@@ -23,7 +23,7 @@ public class MessageBroker : IMessageBroker
     // How long to wait for a single subscriber to accept a message before giving up.
     private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(10);
 
-    public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver, StorageService storageService)
+    public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver, IStorageService storageService)
     {
         _logger = logger;
         _receiver = receiver;

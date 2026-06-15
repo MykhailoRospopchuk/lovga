@@ -19,12 +19,12 @@ public class ReceiverService : IReceiver
 
     private readonly IBrokerManager _brokerManager;
     private readonly ILogger<ReceiverService> _logger;
-    private readonly StorageService _storageService;
+    private readonly IStorageService _storageService;
 
     public ReceiverService(
         IBrokerManager brokerManager,
         ILogger<ReceiverService> logger,
-        StorageService storageService)
+        IStorageService storageService)
     {
         _brokerManager = brokerManager;
         _logger = logger;

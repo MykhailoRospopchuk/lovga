@@ -21,7 +21,7 @@ You can run the broker natively on your local system or inside a Docker containe
 ### Option A: Run Natively
 To quickly spin up the broker locally:
 ```bash
-dotnet run --project LovgaBroker/LovgaBroker.csproj
+dotnet run --project LovgaBroker/LovgaBroker.csproj --Broker:PersistMessages=true
 ```
 
 ### Option B: Run in Docker

@@ -20,7 +20,7 @@ dotnet build LovgaPublisher/LovgaPublisher.csproj -c Release
 
 # Create storage dir if it doesn't exist
 mkdir -p .storage_database
-rm -f .storage_database/StorageDatabase.db
+rm -f .storage_database/StorageDatabase.db*
 
 # Create logs directory and clean previous logs
 mkdir -p logs

@@ -406,5 +406,5 @@ FodyWeavers.xsd
 .storage_database
 
 # Allow committing the test result logs directory and files
-!logs/
-!logs/*
+#!logs/
+#!logs/*

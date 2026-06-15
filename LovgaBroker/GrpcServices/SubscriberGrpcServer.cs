@@ -10,12 +10,12 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
 {
     private readonly ILogger<SubscriberGrpcServer> _logger;
     private readonly IBrokerManager _brokerManager;
-    private readonly StorageService _storageService;
+    private readonly IStorageService _storageService;
 
     public SubscriberGrpcServer(
         IBrokerManager brokerManager,
         ILogger<SubscriberGrpcServer> logger,
-        StorageService storageService)
+        IStorageService storageService)
     {
         _brokerManager = brokerManager;
         _logger = logger;

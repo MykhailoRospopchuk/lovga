@@ -1,10 +1,11 @@
 namespace LovgaBroker.Services;
 
 using Dapper;
+using Interfaces;
 using Models;
 using Storage;
 
-public class StorageService
+public class StorageService : IStorageService
 {
     private readonly DataContext _context;
     private readonly ILogger<StorageService> _logger;
