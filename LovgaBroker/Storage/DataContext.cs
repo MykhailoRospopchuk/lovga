@@ -91,9 +91,17 @@ MessageEntity (
   Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   Topic TEXT,
   Content TEXT,
-  CreatedAt INTEGER,
-  InFlight INTEGER DEFAULT 0,
-  LastDeliveredAt INTEGER DEFAULT 0
+  CreatedAt INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS IDX_MessageEntity_Topic_Id ON MessageEntity (Topic, Id);
+
+CREATE TABLE IF NOT EXISTS 
+SubscriberOffsetEntity (
+  ConsumerGroupId TEXT NOT NULL,
+  Topic TEXT NOT NULL,
+  LastMessageId INTEGER NOT NULL,
+  PRIMARY KEY (ConsumerGroupId, Topic)
 );
 ";
         connection.Execute(sql);

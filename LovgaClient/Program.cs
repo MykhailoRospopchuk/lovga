@@ -24,6 +24,7 @@ class Program
         int numTopics = 5;
         string baseTopic = "bobr-topic";
         bool isLoadTest = true;
+        string group = "default-group";
 
         // Command-line Argument Parsing
         for (int i = 0; i < args.Length; i++)
@@ -44,6 +45,9 @@ class Program
                     break;
                 case "--topic-base":
                     if (i + 1 < args.Length) baseTopic = args[++i];
+                    break;
+                case "--group":
+                    if (i + 1 < args.Length) group = args[++i];
                     break;
                 case "--legacy":
                     isLoadTest = false;
@@ -79,6 +83,10 @@ class Program
 
                 Console.Write($"Enter Number of Topics [{numTopics}]: ");
                 if (int.TryParse(Console.ReadLine()?.Trim(), out var valTopics)) numTopics = valTopics;
+
+                Console.Write($"Enter Consumer Group [{group}]: ");
+                var valGroup = Console.ReadLine()?.Trim();
+                if (!string.IsNullOrEmpty(valGroup)) group = valGroup;
             }
         }
 
@@ -91,6 +99,7 @@ class Program
         Console.WriteLine($"\n[Config] Host: {host}:{port}");
         Console.WriteLine($"[Config] Concurrency: {concurrency} workers");
         Console.WriteLine($"[Config] Topics: {numTopics} (base: '{baseTopic}')");
+        Console.WriteLine($"[Config] Consumer Group: {group}");
         if (args.Length == 0)
         {
             Console.WriteLine("\nPress any key to START subscriber...");
@@ -177,7 +186,8 @@ class Program
                             Subscribe = new SubscribeAction
                             {
                                 Topic = topic,
-                                ConsumerId = subscriberId
+                                ConsumerId = subscriberId,
+                                ConsumerGroup = group
                             }
                         });
 
@@ -306,7 +316,8 @@ class Program
             Subscribe = new SubscribeAction
             {
                 Topic = topic,
-                ConsumerId = subscriberId
+                ConsumerId = subscriberId,
+                ConsumerGroup = "legacy-group"
             }
         });
 

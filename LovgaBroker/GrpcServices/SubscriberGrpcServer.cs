@@ -37,15 +37,17 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                 {
                     case ClientMessage.PayloadOneofCase.Subscribe:
                         var sub = clientMsg.Subscribe;
+                        var group = string.IsNullOrEmpty(sub.ConsumerGroup) ? sub.ConsumerId : sub.ConsumerGroup;
                         var key = (sub.Topic, sub.ConsumerId);
                         if (!activeSubscriptions.ContainsKey(key))
                         {
-                            var consumer = new StreamingConsumer(sub.ConsumerId, responseStream, _storageService, _logger);
+                            var consumer = new StreamingConsumer(sub.ConsumerId, group, sub.Topic, responseStream, _logger);
                             var broker = _brokerManager.GetBroker(sub.Topic);
-                            if (broker.Subscribe(sub.ConsumerId, consumer))
+                            if (broker.Subscribe(sub.ConsumerId, group, consumer))
                             {
                                 activeSubscriptions.TryAdd(key, consumer);
-                                _logger.LogInformation("Subscriber {Id} successfully subscribed to topic {Topic} via stream", sub.ConsumerId, sub.Topic);
+                                _ = Task.Run(async () => await consumer.ProcessLoopAsync());
+                                _logger.LogInformation("Subscriber {Id} (Group: {Group}) successfully subscribed to topic {Topic} via stream", sub.ConsumerId, group, sub.Topic);
                             }
                             else
                             {
@@ -60,7 +62,8 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                         if (activeSubscriptions.TryRemove(unsubKey, out var existingConsumer))
                         {
                             var broker = _brokerManager.GetBroker(unsub.Topic);
-                            broker.Unsubscribe(unsub.ConsumerId);
+                            var unsubGroup = existingConsumer.ConsumerGroupId;
+                            broker.Unsubscribe(unsub.ConsumerId, unsubGroup);
                             existingConsumer.CancelAll();
                             _logger.LogInformation("Subscriber {Id} unsubscribed from topic {Topic}", unsub.ConsumerId, unsub.Topic);
                         }
@@ -72,7 +75,8 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
                         {
                             if (entry.Key.Topic == ack.Topic)
                             {
-                                entry.Value.Acknowledge(ack.MessageId);
+                                var broker = _brokerManager.GetBroker(ack.Topic);
+                                broker.Acknowledge(entry.Value.ConsumerGroupId, ack.MessageId);
                             }
                         }
                         break;
@@ -92,7 +96,7 @@ public class SubscriberGrpcServer : Subscriber.SubscriberBase
             foreach (var entry in activeSubscriptions)
             {
                 var broker = _brokerManager.GetBroker(entry.Key.Topic);
-                broker.Unsubscribe(entry.Key.ConsumerId);
+                broker.Unsubscribe(entry.Key.ConsumerId, entry.Value.ConsumerGroupId);
                 entry.Value.CancelAll();
                 _logger.LogInformation("Cleaned up subscription for {Id} on topic {Topic} due to stream close", entry.Key.ConsumerId, entry.Key.Topic);
             }

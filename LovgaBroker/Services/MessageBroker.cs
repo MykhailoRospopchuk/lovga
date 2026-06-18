@@ -12,21 +12,15 @@ public class MessageBroker : IMessageBroker
 {
     public string Topic { get; private set; }
     private readonly ILogger<MessageBroker> _logger;
-    private readonly IReceiver _receiver;
     private readonly IStorageService _storageService;
 
-    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
-    private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new();
-    private readonly SemaphoreSlim _subscriberSignal = new(0);
-    private readonly Lock _subscriberLock = new();
+    // We no longer loop on _queues in MessageBroker. 
+    // Instead, EnqueueMessage distributes to group dispatchers.
+    private readonly ConcurrentDictionary<string, ConsumerGroupDispatcher> _consumerGroups = new();
 
-    // How long to wait for a single subscriber to accept a message before giving up.
-    private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(10);
-
-    public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver, IStorageService storageService)
+    public MessageBroker(ILogger<MessageBroker> logger, IStorageService storageService)
     {
         _logger = logger;
-        _receiver = receiver;
         _storageService = storageService;
     }
 
@@ -43,134 +37,245 @@ public class MessageBroker : IMessageBroker
 
     public ValueTask EnqueueMessage(Message message)
     {
-        return _queues.Writer.WriteAsync(message);
-    }
-
-    public bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
-    {
-        bool result;
-        lock (_subscriberLock)
+        // Give to each active group dispatcher
+        foreach (var group in _consumerGroups.Values)
         {
-            result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
-
-            // Signal is released inside the lock so the count read and Release() are atomic.
-            // Previously, a concurrent Unsubscribe between TryAdd and Count check could
-            // cause the signal to be skipped → dispatch loop stuck waiting forever.
-            if (result && _subscribers.Count == 1)
-            {
-                _subscriberSignal.Release();
-            }
+            group.EnqueueHotMessage(message);
         }
-
-        return result;
+        return ValueTask.CompletedTask;
     }
 
-    public bool Unsubscribe(string subscriberId)
+    public bool Subscribe(string subscriberId, string consumerGroupId, IConsumerGrpcClient consumerGrpcClient)
     {
-        return RemoveSubscriber(subscriberId);
+        var group = _consumerGroups.GetOrAdd(consumerGroupId, id => new ConsumerGroupDispatcher(id, Topic, _storageService, _logger));
+        return group.AddSubscriber(subscriberId, consumerGrpcClient);
+    }
+
+    public bool Unsubscribe(string subscriberId, string consumerGroupId)
+    {
+        if (_consumerGroups.TryGetValue(consumerGroupId, out var group))
+        {
+            return group.RemoveSubscriber(subscriberId);
+        }
+        return false;
+    }
+
+    public bool ConsumerExists(string subscriberId, string consumerGroupId)
+    {
+        if (_consumerGroups.TryGetValue(consumerGroupId, out var group))
+        {
+            return group.ConsumerExists(subscriberId);
+        }
+        return false;
+    }
+
+    public void Acknowledge(string consumerGroupId, int messageId)
+    {
+        if (_consumerGroups.TryGetValue(consumerGroupId, out var group))
+        {
+            group.Acknowledge(messageId);
+        }
+    }
+
+    public Task DispatchAsync(CancellationToken cancellationToken)
+    {
+        // MessageBroker no longer runs a central dispatch loop.
+        // The individual ConsumerGroupDispatchers run their own loops.
+        return Task.Delay(Timeout.Infinite, cancellationToken);
+    }
+}
+
+public class ConsumerGroupDispatcher
+{
+    public string ConsumerGroupId { get; }
+    public string Topic { get; }
+
+    private readonly IStorageService _storageService;
+    private readonly ILogger _logger;
+    private readonly Channel<Message> _hotMessages = Channel.CreateBounded<Message>(
+        new BoundedChannelOptions(10000) { FullMode = BoundedChannelFullMode.DropOldest });
+
+    private readonly List<IConsumerGrpcClient> _subscribers = new();
+    private int _roundRobinIndex = 0;
+    private readonly Lock _lock = new();
+
+    private int _lastDispatchedId = 0;
+    private int _lastAckedId = 0;
+    private int _lastSavedOffset = 0;
+    private readonly CancellationTokenSource _cts = new();
+
+    public ConsumerGroupDispatcher(string consumerGroupId, string topic, IStorageService storageService, ILogger logger)
+    {
+        ConsumerGroupId = consumerGroupId;
+        Topic = topic;
+        _storageService = storageService;
+        _logger = logger;
+
+        _ = Task.Run(() => ProcessLoopAsync(_cts.Token));
+    }
+
+    public bool AddSubscriber(string subscriberId, IConsumerGrpcClient client)
+    {
+        lock (_lock)
+        {
+            if (_subscribers.Any(s => s.Id == subscriberId)) return false;
+            _subscribers.Add(client);
+            return true;
+        }
+    }
+
+    public bool RemoveSubscriber(string subscriberId)
+    {
+        lock (_lock)
+        {
+            return _subscribers.RemoveAll(s => s.Id == subscriberId) > 0;
+        }
     }
 
     public bool ConsumerExists(string subscriberId)
     {
-        return _subscribers.ContainsKey(subscriberId);
+        lock (_lock)
+        {
+            return _subscribers.Any(s => s.Id == subscriberId);
+        }
     }
 
-    public async Task DispatchAsync(CancellationToken cancellationToken)
+    public void EnqueueHotMessage(Message msg)
     {
-        int counter = 0;
+        _hotMessages.Writer.TryWrite(msg);
+    }
 
-        await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
+    public void Acknowledge(int messageId)
+    {
+        lock (_lock)
         {
-            // Wait until at least one subscriber is registered.
-            while (true)
+            if (messageId > _lastAckedId)
             {
-                lock (_subscriberLock)
+                _lastAckedId = messageId;
+            }
+        }
+    }
+
+    private async Task ProcessLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            _lastAckedId = await _storageService.GetSubscriberOffsetAsync(ConsumerGroupId, Topic);
+            _lastDispatchedId = _lastAckedId;
+            _lastSavedOffset = _lastAckedId;
+
+            _ = Task.Run(() => PeriodicSaveOffsetAsync(ct));
+
+            while (!ct.IsCancellationRequested)
+            {
+                bool hasHot = _hotMessages.Reader.TryPeek(out var hotMsg);
+                
+                if (hasHot && hotMsg.Id == _lastDispatchedId + 1)
                 {
-                    if (_subscribers.Count > 0)
-                        break;
+                    _hotMessages.Reader.TryRead(out var msg);
+                    await DispatchToNextConsumer(msg, ct);
+                    _lastDispatchedId = msg.Id;
+                    continue;
                 }
-                await _subscriberSignal.WaitAsync(cancellationToken);
+
+                if (hasHot && hotMsg.Id <= _lastDispatchedId)
+                {
+                    // Already dispatched this message.
+                    _hotMessages.Reader.TryRead(out _);
+                    continue;
+                }
+
+                // Gap detected or no hot messages. Query DB.
+                var missing = _storageService.GetMessagesAsync(Topic, _lastDispatchedId, 500);
+                int count = 0;
+                await foreach (var msg in missing.WithCancellation(ct))
+                {
+                    await DispatchToNextConsumer(msg, ct);
+                    _lastDispatchedId = msg.Id;
+                    count++;
+                }
+
+                if (count == 0 && !hasHot)
+                {
+                    // No missing messages in DB, and no hot messages.
+                    // Wait for hot message to arrive.
+                    await _hotMessages.Reader.WaitToReadAsync(ct);
+                }
+                else if (count == 0 && hasHot && hotMsg.Id > _lastDispatchedId + 1)
+                {
+                    // Gap detected but DB has no messages? 
+                    // This means publisher hasn't committed to DB yet, but hit the hot queue.
+                    // We must wait a tiny bit for DB to commit.
+                    await Task.Delay(10, ct);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in group dispatcher {Group} on topic {Topic}", ConsumerGroupId, Topic);
+        }
+    }
+
+    private async Task DispatchToNextConsumer(Message msg, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            IConsumerGrpcClient selectedConsumer = null;
+            lock (_lock)
+            {
+                if (_subscribers.Count > 0)
+                {
+                    var index = _roundRobinIndex % _subscribers.Count;
+                    selectedConsumer = _subscribers[index];
+                    _roundRobinIndex = (index + 1) % _subscribers.Count;
+                }
             }
 
-            var keyToRemove = new List<string>();
-            // Capture subscriber count BEFORE delivery so the finally block can compare correctly.
-            var originalCount = _subscribers.Count;
-            _logger.LogInformation("Dispatching message #{Counter} on topic {Topic}", counter++, Topic);
+            if (selectedConsumer == null)
+            {
+                await Task.Delay(100, ct);
+                continue;
+            }
+
+            // Backpressure
+            while (_lastDispatchedId - _lastAckedId > 1000 && !ct.IsCancellationRequested)
+            {
+                await Task.Delay(50, ct);
+            }
+
             try
             {
-                // Fan-out to all subscribers in parallel.
-                // No Task.Run needed — DeliverMessage is already async and executes on the thread pool.
-                // Each delivery gets its own timeout linked to the dispatch cancellation token.
-                var deliveryTasks = _subscribers.Select(async kvp =>
-                {
-                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    cts.CancelAfter(DeliveryTimeout);
-                    try
-                    {
-                        var delivered = await kvp.Value.DeliverMessage(message);
-                        return (IsDelivered: delivered, Key: kvp.Key);
-                    }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                    {
-                        // Delivery timed out for this specific subscriber — don't propagate to others.
-                        _logger.LogWarning(
-                            "Delivery timed out after {Timeout}s for subscriber {Id} on topic {Topic}",
-                            DeliveryTimeout.TotalSeconds, kvp.Key, Topic);
-                        return (IsDelivered: false, Key: kvp.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Delivery failed for subscriber {Id} on topic {Topic}", kvp.Key, Topic);
-                        return (IsDelivered: false, Key: kvp.Key);
-                    }
-                });
-
-                var results = await Task.WhenAll(deliveryTasks);
-
-                keyToRemove = results
-                    .Where(t => !t.IsDelivered)
-                    .Select(t => t.Key)
-                    .ToList();
+                await selectedConsumer.DeliverMessage(msg);
+                break;
             }
-            catch (Exception e)
+            catch
             {
-                _logger.LogError(e, e.Message);
-            }
-            finally
-            {
-                foreach (var key in keyToRemove)
-                {
-                    RemoveSubscriber(key);
-                }
-
-                // If delivery failed for every subscriber, route to the dead-letter queue.
-                if (keyToRemove.Count == originalCount)
-                {
-                    await EnqueueDeadMessage(message);
-                    await _storageService.DeleteMessage(message.Id);
-                }
+                RemoveSubscriber(selectedConsumer.Id);
             }
         }
     }
 
-    private bool RemoveSubscriber(string subscriberId)
+    private async Task PeriodicSaveOffsetAsync(CancellationToken token)
     {
-        if (_subscribers.TryRemove(subscriberId, out _))
+        try
         {
-            _logger.LogInformation("Subscriber {SubscriberId} removed from topic {Topic}", subscriberId, Topic);
-            return true;
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(1000, token);
+                int ackToSave;
+                lock (_lock)
+                {
+                    ackToSave = _lastAckedId;
+                }
+
+                if (ackToSave > _lastSavedOffset)
+                {
+                    await _storageService.SaveOffsetAsync(ConsumerGroupId, Topic, ackToSave);
+                    _lastSavedOffset = ackToSave;
+                }
+            }
         }
-
-        return false;
-    }
-
-    private ValueTask EnqueueDeadMessage(Message message)
-    {
-        return _receiver.Publish(new Message
-        {
-            Topic = QueueTopic.DeadLetterQueue,
-            Content = message.Content,
-            CreatedAt = message.CreatedAt
-        });
+        catch (OperationCanceledException) { }
     }
 }

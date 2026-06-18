@@ -34,6 +34,7 @@ public class Program
         builder.Services.AddHostedService<GrpcServerHostedService>();
         builder.Services.AddHostedService<BrokerWorker>();
         builder.Services.AddHostedService<ReceiverWorker>();
+        builder.Services.AddHostedService<RetentionWorker>();
 
         builder.Services.AddSingleton<IBrokerManager, BrokerManager>();
         builder.Services.AddSingleton<IReceiver, ReceiverService>();

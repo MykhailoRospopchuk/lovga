@@ -20,7 +20,7 @@ public class PublisherGrpcServer : Publisher.PublisherBase
 
     public override async Task<Reply> Publish(PublishRequest request, ServerCallContext context)
     {
-        _logger.LogInformation($"Published message from gRPC. Topic: {request.Topic}");
+        _logger.LogDebug($"Published message from gRPC. Topic: {request.Topic}");
         await _receiver.Publish(new Message
         {
             Topic = request.Topic,

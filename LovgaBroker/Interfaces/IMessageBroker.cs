@@ -8,8 +8,9 @@ public interface IMessageBroker
     string Topic { get; }
     void SetTopic(string topic);
     ValueTask EnqueueMessage(Message message);
-    bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient);
-    bool Unsubscribe(string subscriberId);
-    bool ConsumerExists(string subscriberId);
+    bool Subscribe(string subscriberId, string consumerGroupId, IConsumerGrpcClient consumerGrpcClient);
+    bool Unsubscribe(string subscriberId, string consumerGroupId);
+    bool ConsumerExists(string subscriberId, string consumerGroupId);
+    void Acknowledge(string consumerGroupId, int messageId);
     Task DispatchAsync(CancellationToken cancellationToken);
 }

@@ -19,6 +19,7 @@ message ClientMessage {
 message SubscribeAction {
   string topic = 1;
   string consumer_id = 2;
+  string consumer_group = 3;
 }
 
 message UnsubscribeAction {

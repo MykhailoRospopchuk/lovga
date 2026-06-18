@@ -3,11 +3,11 @@
 =================================================
 
 [Config] Host: localhost:8080
-[Config] Concurrency: 10 workers
-[Config] Topics: 5 (base: 'bobr-topic')
-[Config] Messages/worker: 1000 (Total: 10000)
+[Config] Concurrency: 50 workers
+[Config] Topics: 10 (base: 'bobr-topic')
+[Config] Messages/worker: 2000 (Total: 100000)
 [Config] Delay: 0 ms
-[Config] Payload size: 100 bytes
+[Config] Payload size: 50 bytes
 [Config] Pipeline depth: 10
 
 Starting load test automatically (arguments provided)...
@@ -15,64 +15,168 @@ Starting load test automatically (arguments provided)...
           LOVGA PUBLISHER LOAD DASHBOARD        
 =================================================
 Elapsed Time:      00:00:01
-Active Workers:    10 / 10
-Messages Sent:     2,366 (Failed: 0)
-Throughput:        2363.64 msg/sec
+Active Workers:    50 / 50
+Messages Sent:     5,317 (Failed: 0)
+Throughput:        5251.83 msg/sec
 Publish Latency:
-  - Average:       38.98 ms
-  - Min:           17.14 ms
-  - Max:           166.45 ms
+  - Average:       80.90 ms
+  - Min:           18.57 ms
+  - Max:           162.02 ms
 =================================================
 Press Ctrl+C to terminate early.
 =================================================
           LOVGA PUBLISHER LOAD DASHBOARD        
 =================================================
 Elapsed Time:      00:00:02
-Active Workers:    10 / 10
-Messages Sent:     5,361 (Failed: 0)
-Throughput:        2954.54 msg/sec
+Active Workers:    50 / 50
+Messages Sent:     13,322 (Failed: 0)
+Throughput:        7638.89 msg/sec
 Publish Latency:
-  - Average:       36.22 ms
-  - Min:           17.14 ms
-  - Max:           166.45 ms
+  - Average:       71.57 ms
+  - Min:           11.94 ms
+  - Max:           162.02 ms
 =================================================
 Press Ctrl+C to terminate early.
 =================================================
           LOVGA PUBLISHER LOAD DASHBOARD        
 =================================================
 Elapsed Time:      00:00:03
-Active Workers:    10 / 10
-Messages Sent:     8,655 (Failed: 0)
-Throughput:        3293.54 msg/sec
+Active Workers:    50 / 50
+Messages Sent:     22,851 (Failed: 0)
+Throughput:        9508.60 msg/sec
 Publish Latency:
-  - Average:       33.98 ms
-  - Min:           17.14 ms
-  - Max:           208.46 ms
+  - Average:       63.93 ms
+  - Min:           11.94 ms
+  - Max:           162.02 ms
 =================================================
 Press Ctrl+C to terminate early.
 =================================================
           LOVGA PUBLISHER LOAD DASHBOARD        
 =================================================
 Elapsed Time:      00:00:04
-Active Workers:    0 / 10
-Messages Sent:     10,000 (Failed: 0)
-Throughput:        1344.75 msg/sec
+Active Workers:    50 / 50
+Messages Sent:     32,265 (Failed: 0)
+Throughput:        9366.32 msg/sec
 Publish Latency:
-  - Average:       33.38 ms
-  - Min:           7.73 ms
-  - Max:           253.53 ms
+  - Average:       61.02 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:05
+Active Workers:    50 / 50
+Messages Sent:     42,437 (Failed: 0)
+Throughput:        10176.90 msg/sec
+Publish Latency:
+  - Average:       58.26 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:06
+Active Workers:    50 / 50
+Messages Sent:     51,091 (Failed: 0)
+Throughput:        8640.47 msg/sec
+Publish Latency:
+  - Average:       58.16 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:07
+Active Workers:    50 / 50
+Messages Sent:     57,818 (Failed: 0)
+Throughput:        6724.45 msg/sec
+Publish Latency:
+  - Average:       59.92 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:08
+Active Workers:    50 / 50
+Messages Sent:     68,103 (Failed: 0)
+Throughput:        10280.04 msg/sec
+Publish Latency:
+  - Average:       58.34 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:09
+Active Workers:    50 / 50
+Messages Sent:     79,139 (Failed: 0)
+Throughput:        10956.33 msg/sec
+Publish Latency:
+  - Average:       56.45 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:10
+Active Workers:    50 / 50
+Messages Sent:     87,970 (Failed: 0)
+Throughput:        8826.63 msg/sec
+Publish Latency:
+  - Average:       56.39 ms
+  - Min:           9.11 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:11
+Active Workers:    11 / 50
+Messages Sent:     99,930 (Failed: 0)
+Throughput:        11942.64 msg/sec
+Publish Latency:
+  - Average:       54.73 ms
+  - Min:           3.36 ms
+  - Max:           162.02 ms
+=================================================
+Press Ctrl+C to terminate early.
+=================================================
+          LOVGA PUBLISHER LOAD DASHBOARD        
+=================================================
+Elapsed Time:      00:00:12
+Active Workers:    0 / 50
+Messages Sent:     100,000 (Failed: 0)
+Throughput:        69.94 msg/sec
+Publish Latency:
+  - Average:       54.70 ms
+  - Min:           0.99 ms
+  - Max:           162.02 ms
 =================================================
 Press Ctrl+C to terminate early.
 =================================================
           LOAD TEST COMPLETE - SUMMARY           
 =================================================
-Total Duration:      00:00:04.017
-Total Messages:      10000
-Successfully Sent:   10,000
+Total Duration:      00:00:12.082
+Total Messages:      100000
+Successfully Sent:   100,000
 Failed Messages:     0
-Overall Throughput:  2489.38 msg/sec
+Overall Throughput:  8276.55 msg/sec
 Publish Latency:
-  - Average:         33.38 ms
-  - Min:             7.73 ms
-  - Max:             253.53 ms
+  - Average:         54.70 ms
+  - Min:             0.99 ms
+  - Max:             162.02 ms
 =================================================

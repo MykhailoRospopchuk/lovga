@@ -6,5 +6,4 @@ public interface IReceiver
 {
     ValueTask Publish(Message message);
     Task DispatchAsync(CancellationToken cancellationToken);
-    Task LoadStoredMessages();
 }

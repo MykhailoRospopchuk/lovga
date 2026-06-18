@@ -14,15 +14,26 @@ public class NullStorageService : IStorageService
     public Task<int> InsertMessage(Message message)
         => Task.FromResult(Interlocked.Increment(ref _idCounter));
 
-    public Task<bool> MarkInFlight(int id) => Task.FromResult(true);
+    public Task InsertMessagesAsync(IEnumerable<Message> messages)
+    {
+        foreach (var msg in messages)
+        {
+            msg.SetId(Interlocked.Increment(ref _idCounter));
+        }
+        return Task.CompletedTask;
+    }
 
-    public Task<bool> ReleaseInFlight(int id) => Task.FromResult(true);
+    public Task SaveOffsetAsync(string consumerGroupId, string topic, int lastMessageId) => Task.CompletedTask;
+    
+    public Task SaveOffsetsAsync(IEnumerable<(string Group, string Topic, int Offset)> offsets) => Task.CompletedTask;
 
-    public async IAsyncEnumerable<Message> GetChunkMessagesAsync()
+    public Task<int> GetSubscriberOffsetAsync(string consumerGroupId, string topic) => Task.FromResult(0);
+
+    public async IAsyncEnumerable<Message> GetMessagesAsync(string topic, int fromId, int limit = 500)
     {
         await Task.CompletedTask;
         yield break;
     }
 
-    public Task DeleteMessage(int id) => Task.CompletedTask;
+    public Task DeleteMessagesOlderThanAsync(DateTime threshold) => Task.CompletedTask;
 }

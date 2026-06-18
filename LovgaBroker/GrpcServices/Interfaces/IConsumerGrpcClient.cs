@@ -5,5 +5,5 @@ using Models;
 public interface IConsumerGrpcClient
 {
     string Id { get; }
-    Task<bool> DeliverMessage(Message message);
+    ValueTask<bool> DeliverMessage(Message message);
 }
