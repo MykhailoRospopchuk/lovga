@@ -99,6 +99,7 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+*.logs
 
 # Chutzpah Test files
 _Chutzpah*
@@ -407,5 +408,5 @@ FodyWeavers.xsd
 .storage_database
 
 # Allow committing the test result logs directory and files
-!logs/
-!logs/*
+#!logs/
+#!logs/*

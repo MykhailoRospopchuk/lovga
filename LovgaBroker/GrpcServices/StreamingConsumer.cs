@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
 using Interfaces;
+using LovgaBroker.Interfaces;
 using LovgaCommon;
 using Models;
 
