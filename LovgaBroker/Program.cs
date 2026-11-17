@@ -1,34 +1,50 @@
 namespace LovgaBroker;
 
+using System.Net;
 using GrpcServices;
 using GrpcServices.Interceptors;
-using GrpcServices.Interfaces;
 using Interfaces;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Models;
 using Services;
 using Services.BackgroundServices;
-using Services.HostedServices;
 using Storage;
 
-public class Program
+public sealed class Program
 {
     public static void Main(string[] args)
     {
-        SQLitePCL.Batteries.Init();
-
-        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             Args = args,
             ContentRootPath = AppContext.BaseDirectory
         });
 
-        builder.Services.AddLogging(configure => 
-            configure.AddSimpleConsole(options =>
-            {
-                options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
-                options.SingleLine = true;
-            }));
+        var brokerOptions = builder.Configuration
+            .GetSection(BrokerOptions.SectionName)
+            .Get<BrokerOptions>() ?? new BrokerOptions();
 
-        builder.Services.AddHostedService<GrpcServerHostedService>();
+        var port = builder.Configuration.GetValue("Broker:Port", 8080);
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Listen(IPAddress.Any, port, listenOptions =>
+            {
+                listenOptions.Protocols = HttpProtocols.Http2;
+            });
+        });
+
+        builder.Logging.ClearProviders();
+        builder.Logging.AddSimpleConsole(options =>
+        {
+            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+            options.SingleLine = true;
+        });
+
+        builder.Services.AddGrpc(options =>
+        {
+            options.Interceptors.Add<DeadLetterTopicInterceptor>();
+        });
+
         builder.Services.AddHostedService<BrokerWorker>();
         builder.Services.AddHostedService<ReceiverWorker>();
 
@@ -39,16 +55,35 @@ public class Program
         builder.Services.AddSingleton<PublisherGrpcServer>();
         builder.Services.AddSingleton<DeadLetterTopicInterceptor>();
 
-        builder.Services.AddSingleton<DataContext>();
-        builder.Services.AddTransient<StorageService>();
+        if (brokerOptions.PersistMessages)
+        {
+            SQLitePCL.Batteries.Init();
+            builder.Services.AddSingleton<DataContext>();
+            builder.Services.AddSingleton<IStorageService, StorageService>();
+        }
+        else
+        {
+            builder.Services.AddSingleton<IStorageService, NullStorageService>();
+        }
+
         builder.Services.AddTransient<IMessageBroker, MessageBroker>();
 
-        var host = builder.Build();
+        var app = builder.Build();
 
-        using var scope = host.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
-        context.Init();
+        if (brokerOptions.PersistMessages)
+        {
+            using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+            context.Init();
+        }
 
-        host.Run();
+        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger<Program>();
+        logger.LogInformation("Broker mode: {Mode}",
+            brokerOptions.PersistMessages ? "Persistent (messages saved to DB)" : "Direct (no persistence)");
+
+        app.MapGrpcService<SubscriberGrpcServer>();
+        app.MapGrpcService<PublisherGrpcServer>();
+
+        app.Run();
     }
 }

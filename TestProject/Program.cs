@@ -15,7 +15,6 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         SatelliteExtensions.ConfigureChannel("localhost", 8080);
-        SatelliteExtensions.ConfigureHost("localhost", 7880);
         SatelliteExtensions.InitChannel();
         SatelliteExtensions.RegisterAction("bobr-topic", message => messageProcessor.ProcessMessage(message));
 

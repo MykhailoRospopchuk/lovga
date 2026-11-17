@@ -4,11 +4,14 @@ using System.Threading.Channels;
 using Interfaces;
 using Models;
 
-public class ReceiverService : IReceiver
+public sealed class ReceiverService(
+    IBrokerManager brokerManager,
+    ILogger<ReceiverService> logger,
+    IStorageService storageService) : IReceiver
 {
     // Bounded channel: when full, WriteAsync yields — naturally propagating back-pressure to publishers.
     // FullMode.Wait means the gRPC publish handler will pause (not drop or throw) until space is available.
-    // SingleReader=true allows the channel to skip reader-count tracking for a small perf gain.
+    // SingleReader=true allows the channel to skip reader-count tracking for a perf gain.
     private readonly Channel<Message> _messages = Channel.CreateBounded<Message>(
         new BoundedChannelOptions(10_000)
         {
@@ -17,46 +20,45 @@ public class ReceiverService : IReceiver
             SingleWriter = false,
         });
 
-    private readonly IBrokerManager _brokerManager;
-    private readonly ILogger<ReceiverService> _logger;
-    private readonly StorageService _storageService;
-
-    public ReceiverService(
-        IBrokerManager brokerManager,
-        ILogger<ReceiverService> logger,
-        StorageService storageService)
+    public async ValueTask<bool> Publish(Message message, CancellationToken cancellationToken = default)
     {
-        _brokerManager = brokerManager;
-        _logger = logger;
-        _storageService = storageService;
-    }
+        var id = await storageService.InsertMessage(message);
+        if (id <= 0)
+        {
+            logger.LogError("Dropping publish for topic {Topic} because SQLite insert failed", message.Topic);
+            return false;
+        }
 
-    public async ValueTask Publish(Message message)
-    {
-        var id = await _storageService.InsertMessage(message);
         message.SetId(id);
-
-        await _messages.Writer.WriteAsync(message);
+        await _messages.Writer.WriteAsync(message, cancellationToken);
+        return true;
     }
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
     {
         await foreach (var message in _messages.Reader.ReadAllAsync(cancellationToken))
         {
-            var broker = _brokerManager.GetBroker(message.Topic);
+            var broker = brokerManager.GetBroker(message.Topic);
             await broker.EnqueueMessage(message);
         }
     }
 
-    public async Task LoadStoredMessages()
+    public async Task LoadStoredMessages(CancellationToken cancellationToken = default)
     {
-        var chunk = _storageService.GetChunkMessagesAsync();
-
-        await foreach (var message in chunk)
+        var maxId = await storageService.GetMaxMessageIdAsync();
+        if (maxId <= 0)
         {
-            await _messages.Writer.WriteAsync(message);
+            logger.LogInformation("No stored messages to recover on startup");
+            return;
         }
 
-        _logger.LogInformation("Loading stored messages completed");
+        var recoveredCount = 0;
+        await foreach (var message in storageService.GetChunkMessagesAsync(maxId, cancellationToken))
+        {
+            await _messages.Writer.WriteAsync(message, cancellationToken);
+            recoveredCount++;
+        }
+
+        logger.LogInformation("Loading stored messages completed ({Count} messages recovered up to Id {MaxId})", recoveredCount, maxId);
     }
 }

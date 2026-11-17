@@ -8,27 +8,30 @@ using Interfaces;
 using LovgaCommon.Constants;
 using Models;
 
-public class MessageBroker : IMessageBroker
+public sealed class MessageBroker(
+    ILogger<MessageBroker> logger,
+    IReceiver receiver,
+    IStorageService storageService) : IMessageBroker
 {
-    public string Topic { get; private set; }
-    private readonly ILogger<MessageBroker> _logger;
-    private readonly IReceiver _receiver;
-    private readonly StorageService _storageService;
+    public string Topic { get; private set; } = string.Empty;
 
-    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>();
+    private readonly Channel<Message> _queues = Channel.CreateUnbounded<Message>(new UnboundedChannelOptions
+    {
+        SingleReader = true,
+        SingleWriter = false
+    });
     private readonly ConcurrentDictionary<string, IConsumerGrpcClient> _subscribers = new();
-    private readonly SemaphoreSlim _subscriberSignal = new(0);
     private readonly Lock _subscriberLock = new();
+    private TaskCompletionSource _hasSubscribersSignal = CreateSignal();
 
-    // How long to wait for a single subscriber to accept a message before giving up.
+    // How long to wait for a single subscriber to accept & ACK a message before evicting it.
     private static readonly TimeSpan DeliveryTimeout = TimeSpan.FromSeconds(10);
 
-    public MessageBroker(ILogger<MessageBroker> logger, IReceiver receiver, StorageService storageService)
-    {
-        _logger = logger;
-        _receiver = receiver;
-        _storageService = storageService;
-    }
+    // Maximum number of concurrent messages in flight per topic (prevents head-of-line blocking across RTTs).
+    private const int MaxInFlightMessagesPerTopic = 64;
+
+    private static TaskCompletionSource CreateSignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public void SetTopic(string topic)
     {
@@ -48,21 +51,16 @@ public class MessageBroker : IMessageBroker
 
     public bool Subscribe(string subscriberId, IConsumerGrpcClient consumerGrpcClient)
     {
-        bool result;
         lock (_subscriberLock)
         {
-            result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
-
-            // Signal is released inside the lock so the count read and Release() are atomic.
-            // Previously, a concurrent Unsubscribe between TryAdd and Count check could
-            // cause the signal to be skipped → dispatch loop stuck waiting forever.
-            if (result && _subscribers.Count == 1)
+            var result = _subscribers.TryAdd(subscriberId, consumerGrpcClient);
+            if (result && _subscribers.Count > 0)
             {
-                _subscriberSignal.Release();
+                _hasSubscribersSignal.TrySetResult();
             }
-        }
 
-        return result;
+            return result;
+        }
     }
 
     public bool Unsubscribe(string subscriberId)
@@ -77,100 +75,203 @@ public class MessageBroker : IMessageBroker
 
     public async Task DispatchAsync(CancellationToken cancellationToken)
     {
-        int counter = 0;
+        using var concurrencyLimiter = new SemaphoreSlim(MaxInFlightMessagesPerTopic, MaxInFlightMessagesPerTopic);
+        var inFlightTasks = new ConcurrentDictionary<long, Task>();
+        long dispatchSequence = 0;
 
-        await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
+        try
         {
-            // Wait until at least one subscriber is registered.
-            while (true)
+            await foreach (var message in _queues.Reader.ReadAllAsync(cancellationToken))
             {
-                lock (_subscriberLock)
+                // Wait until at least one subscriber is registered.
+                while (true)
                 {
-                    if (_subscribers.Count > 0)
-                        break;
+                    Task waitTask;
+                    lock (_subscriberLock)
+                    {
+                        if (!_subscribers.IsEmpty)
+                        {
+                            break;
+                        }
+
+                        if (_hasSubscribersSignal.Task.IsCompleted)
+                        {
+                            _hasSubscribersSignal = CreateSignal();
+                        }
+
+                        waitTask = _hasSubscribersSignal.Task;
+                    }
+
+                    await waitTask.WaitAsync(cancellationToken);
                 }
-                await _subscriberSignal.WaitAsync(cancellationToken);
-            }
 
-            var keyToRemove = new List<string>();
-            // Capture subscriber count BEFORE delivery so the finally block can compare correctly.
-            var originalCount = _subscribers.Count;
-            _logger.LogInformation("Dispatching message #{Counter} on topic {Topic}", counter++, Topic);
-            try
-            {
-                // Fan-out to all subscribers in parallel.
-                // No Task.Run needed — DeliverMessage is already async and executes on the thread pool.
-                // Each delivery gets its own timeout linked to the dispatch cancellation token.
-                var deliveryTasks = _subscribers.Select(async kvp =>
+                await concurrencyLimiter.WaitAsync(cancellationToken);
+
+                var seq = Interlocked.Increment(ref dispatchSequence);
+                if (logger.IsEnabled(LogLevel.Debug))
                 {
-                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    cts.CancelAfter(DeliveryTimeout);
-                    try
-                    {
-                        var delivered = await kvp.Value.DeliverMessage(message);
-                        return (IsDelivered: delivered, Key: kvp.Key);
-                    }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                    {
-                        // Delivery timed out for this specific subscriber — don't propagate to others.
-                        _logger.LogWarning(
-                            "Delivery timed out after {Timeout}s for subscriber {Id} on topic {Topic}",
-                            DeliveryTimeout.TotalSeconds, kvp.Key, Topic);
-                        return (IsDelivered: false, Key: kvp.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Delivery failed for subscriber {Id} on topic {Topic}", kvp.Key, Topic);
-                        return (IsDelivered: false, Key: kvp.Key);
-                    }
-                });
+                    logger.LogDebug("Dispatching message #{Counter} (Id={MessageId}) on topic {Topic}", seq, message.Id, Topic);
+                }
 
-                var results = await Task.WhenAll(deliveryTasks);
+                var task = DispatchSingleMessageAsync(message, concurrencyLimiter, seq, inFlightTasks, cancellationToken);
+                inFlightTasks.TryAdd(seq, task);
+            }
+        }
+        finally
+        {
+            if (!inFlightTasks.IsEmpty)
+            {
+                await Task.WhenAll(inFlightTasks.Values);
+            }
+        }
+    }
 
-                keyToRemove = results
-                    .Where(t => !t.IsDelivered)
-                    .Select(t => t.Key)
-                    .ToList();
-            }
-            catch (Exception e)
+    private async Task DispatchSingleMessageAsync(
+        Message message,
+        SemaphoreSlim concurrencyLimiter,
+        long seq,
+        ConcurrentDictionary<long, Task> inFlightTasks,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            KeyValuePair<string, IConsumerGrpcClient>[] subscribersSnapshot;
+            lock (_subscriberLock)
             {
-                _logger.LogError(e, e.Message);
+                subscribersSnapshot = [.. _subscribers];
             }
-            finally
+
+            if (subscribersSnapshot.Length == 0)
             {
-                foreach (var key in keyToRemove)
+                // Subscribers disconnected right before snapshot; re-enqueue for when a subscriber arrives
+                await _queues.Writer.WriteAsync(message, cancellationToken);
+                return;
+            }
+
+            await storageService.MarkInFlight(message.Id);
+
+            var deliveryTasks = new Task<(bool IsDelivered, string Key)>[subscribersSnapshot.Length];
+            for (int i = 0; i < subscribersSnapshot.Length; i++)
+            {
+                var kvp = subscribersSnapshot[i];
+                deliveryTasks[i] = DeliverToSubscriberAsync(kvp.Key, kvp.Value, message, cancellationToken);
+            }
+
+            var results = await Task.WhenAll(deliveryTasks);
+
+            var failedCount = 0;
+            foreach (var (isDelivered, key) in results)
+            {
+                if (!isDelivered)
                 {
+                    failedCount++;
                     RemoveSubscriber(key);
                 }
+            }
 
-                // If delivery failed for every subscriber, route to the dead-letter queue.
-                if (keyToRemove.Count == originalCount)
+            if (failedCount == subscribersSnapshot.Length)
+            {
+                // All subscribers failed delivery
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    await EnqueueDeadMessage(message);
-                    await _storageService.DeleteMessage(message.Id);
+                    if (Topic != QueueTopic.DeadLetterQueue)
+                    {
+                        await EnqueueDeadMessage(message, cancellationToken);
+                        await storageService.DeleteMessage(message.Id);
+                    }
+                    else
+                    {
+                        await storageService.ReleaseInFlight(message.Id);
+                    }
+                }
+                else
+                {
+                    await storageService.ReleaseInFlight(message.Id);
                 }
             }
+            else
+            {
+                // Delivered and ACKed by at least one active subscriber
+                await storageService.DeleteMessage(message.Id);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await storageService.ReleaseInFlight(message.Id);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Unexpected error dispatching message {MessageId} on topic {Topic}", message.Id, Topic);
+            await storageService.ReleaseInFlight(message.Id);
+        }
+        finally
+        {
+            inFlightTasks.TryRemove(seq, out _);
+            concurrencyLimiter.Release();
+        }
+    }
+
+    private async Task<(bool IsDelivered, string Key)> DeliverToSubscriberAsync(
+        string subscriberId,
+        IConsumerGrpcClient consumer,
+        Message message,
+        CancellationToken cancellationToken)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(DeliveryTimeout);
+        try
+        {
+            var delivered = await consumer.DeliverMessage(message, cts.Token);
+            if (!delivered && !cancellationToken.IsCancellationRequested)
+            {
+                logger.LogWarning(
+                    "Delivery failed or timed out for subscriber {Id} on topic {Topic} (MessageId={MessageId})",
+                    subscriberId, Topic, message.Id);
+            }
+
+            return (delivered, subscriberId);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning(
+                "Delivery timed out after {Timeout}s for subscriber {Id} on topic {Topic}",
+                DeliveryTimeout.TotalSeconds, subscriberId, Topic);
+            return (false, subscriberId);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Delivery failed for subscriber {Id} on topic {Topic}", subscriberId, Topic);
+            return (false, subscriberId);
         }
     }
 
     private bool RemoveSubscriber(string subscriberId)
     {
-        if (_subscribers.TryRemove(subscriberId, out _))
+        bool removed;
+        lock (_subscriberLock)
         {
-            _logger.LogInformation("Subscriber {SubscriberId} removed from topic {Topic}", subscriberId, Topic);
-            return true;
+            removed = _subscribers.TryRemove(subscriberId, out _);
+            if (_subscribers.IsEmpty && _hasSubscribersSignal.Task.IsCompleted)
+            {
+                _hasSubscribersSignal = CreateSignal();
+            }
         }
 
-        return false;
+        if (removed)
+        {
+            logger.LogInformation("Subscriber {SubscriberId} removed from topic {Topic}", subscriberId, Topic);
+        }
+
+        return removed;
     }
 
-    private ValueTask EnqueueDeadMessage(Message message)
+    private ValueTask<bool> EnqueueDeadMessage(Message message, CancellationToken cancellationToken)
     {
-        return _receiver.Publish(new Message
+        return receiver.Publish(new Message
         {
             Topic = QueueTopic.DeadLetterQueue,
             Content = message.Content,
             CreatedAt = message.CreatedAt
-        });
+        }, cancellationToken);
     }
 }

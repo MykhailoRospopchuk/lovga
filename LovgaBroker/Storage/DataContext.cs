@@ -5,38 +5,31 @@ using System.IO;
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-public class DataContext
+public sealed class DataContext
 {
-    private readonly IConfiguration _configuration;
+    private readonly string _connectionString;
 
     public DataContext(IConfiguration configuration)
     {
-        _configuration = configuration;
+        var rawConnectionString = configuration.GetConnectionString("Storage");
+        if (string.IsNullOrEmpty(rawConnectionString))
+        {
+            rawConnectionString = "Data Source=../.storage_database/StorageDatabase.db";
+        }
+
+        var builder = new SqliteConnectionStringBuilder(rawConnectionString)
+        {
+            Pooling = true,
+            DefaultTimeout = 30
+        };
+        builder.DataSource = ResolveDatabasePath(builder.DataSource);
+        _connectionString = builder.ConnectionString;
     }
 
     public IDbConnection CreateConnection()
     {
-        var connectionString = _configuration.GetConnectionString("Storage");
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            connectionString = "Data Source=../.storage_database/StorageDatabase.db";
-        }
-
-        var builder = new SqliteConnectionStringBuilder(connectionString);
-        builder.DataSource = ResolveDatabasePath(builder.DataSource);
-
-        var connection = new SqliteConnection(builder.ConnectionString);
+        var connection = new SqliteConnection(_connectionString);
         connection.Open();
-        using (var command = connection.CreateCommand())
-        {
-            command.CommandText = @"
-                PRAGMA journal_mode=WAL;
-                PRAGMA synchronous=NORMAL;
-                PRAGMA temp_store=MEMORY;
-                PRAGMA busy_timeout=5000;
-            ";
-            command.ExecuteNonQuery();
-        }
         return connection;
     }
 
@@ -84,18 +77,24 @@ public class DataContext
     {
         using var connection = CreateConnection();
 
-        var sql = 
-@"
-CREATE TABLE IF NOT EXISTS 
-MessageEntity (
-  Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  Topic TEXT,
-  Content TEXT,
-  CreatedAt INTEGER,
-  InFlight INTEGER DEFAULT 0,
-  LastDeliveredAt INTEGER DEFAULT 0
-);
-";
+        const string sql = """
+            PRAGMA journal_mode=WAL;
+            PRAGMA synchronous=NORMAL;
+            PRAGMA temp_store=MEMORY;
+            PRAGMA busy_timeout=30000;
+
+            CREATE TABLE IF NOT EXISTS MessageEntity (
+              Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+              Topic TEXT NOT NULL,
+              Content TEXT NOT NULL,
+              CreatedAt INTEGER NOT NULL,
+              InFlight INTEGER DEFAULT 0,
+              LastDeliveredAt INTEGER DEFAULT 0
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_MessageEntity_InFlight_Id ON MessageEntity (InFlight, Id);
+            """;
+
         connection.Execute(sql);
     }
 }

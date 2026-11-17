@@ -4,7 +4,7 @@ using Models;
 
 public interface IReceiver
 {
-    ValueTask Publish(Message message);
+    ValueTask<bool> Publish(Message message, CancellationToken cancellationToken = default);
     Task DispatchAsync(CancellationToken cancellationToken);
-    Task LoadStoredMessages();
+    Task LoadStoredMessages(CancellationToken cancellationToken = default);
 }

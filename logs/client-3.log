@@ -26,13 +26,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:02
 Active Clients:    10 / 10
-Messages Received: 128
-ACKs Sent:         128
-Throughput:        125.46 msg/sec
+Messages Received: 15,099
+ACKs Sent:         15,099
+Throughput:        14955.77 msg/sec
 End-to-End Latency:
-  - Average:       444.00 ms
-  - Min:           94.38 ms
-  - Max:           953.31 ms
+  - Average:       42.34 ms
+  - Min:           3.80 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -40,13 +40,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:03
 Active Clients:    10 / 10
-Messages Received: 296
-ACKs Sent:         295
-Throughput:        167.25 msg/sec
+Messages Received: 36,576
+ACKs Sent:         36,123
+Throughput:        21457.66 msg/sec
 End-to-End Latency:
-  - Average:       1044.59 ms
-  - Min:           94.38 ms
-  - Max:           1937.71 ms
+  - Average:       36.90 ms
+  - Min:           2.47 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -54,13 +54,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:04
 Active Clients:    10 / 10
-Messages Received: 492
-ACKs Sent:         492
-Throughput:        195.95 msg/sec
+Messages Received: 57,389
+ACKs Sent:         57,304
+Throughput:        20799.44 msg/sec
 End-to-End Latency:
-  - Average:       1612.63 ms
-  - Min:           94.38 ms
-  - Max:           2936.45 ms
+  - Average:       36.00 ms
+  - Min:           2.47 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -68,13 +68,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:05
 Active Clients:    10 / 10
-Messages Received: 705
-ACKs Sent:         704
-Throughput:        212.92 msg/sec
+Messages Received: 60,000
+ACKs Sent:         60,000
+Throughput:        2602.95 msg/sec
 End-to-End Latency:
-  - Average:       2156.23 ms
-  - Min:           94.38 ms
-  - Max:           3914.56 ms
+  - Average:       35.22 ms
+  - Min:           1.73 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -82,13 +82,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:06
 Active Clients:    10 / 10
-Messages Received: 894
-ACKs Sent:         894
-Throughput:        188.94 msg/sec
+Messages Received: 60,000
+ACKs Sent:         60,000
+Throughput:        0.00 msg/sec
 End-to-End Latency:
-  - Average:       2637.73 ms
-  - Min:           94.38 ms
-  - Max:           4895.58 ms
+  - Average:       35.22 ms
+  - Min:           1.73 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -96,13 +96,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:07
 Active Clients:    10 / 10
-Messages Received: 2,157
-ACKs Sent:         2,157
-Throughput:        1262.52 msg/sec
+Messages Received: 60,000
+ACKs Sent:         60,000
+Throughput:        0.00 msg/sec
 End-to-End Latency:
-  - Average:       4343.21 ms
-  - Min:           94.38 ms
-  - Max:           5821.81 ms
+  - Average:       35.22 ms
+  - Min:           1.73 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -110,13 +110,13 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:08
 Active Clients:    10 / 10
-Messages Received: 4,771
-ACKs Sent:         4,771
-Throughput:        2613.37 msg/sec
+Messages Received: 60,000
+ACKs Sent:         60,000
+Throughput:        0.00 msg/sec
 End-to-End Latency:
-  - Average:       5310.79 ms
-  - Min:           94.38 ms
-  - Max:           6502.35 ms
+  - Average:       35.22 ms
+  - Min:           1.73 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.
 =================================================
@@ -124,54 +124,12 @@ Press Ctrl+C to stop.
 =================================================
 Elapsed Time:      00:00:09
 Active Clients:    10 / 10
-Messages Received: 7,392
-ACKs Sent:         7,392
-Throughput:        2620.50 msg/sec
+Messages Received: 60,000
+ACKs Sent:         60,000
+Throughput:        0.00 msg/sec
 End-to-End Latency:
-  - Average:       5841.60 ms
-  - Min:           94.38 ms
-  - Max:           7205.05 ms
-=================================================
-Press Ctrl+C to stop.
-=================================================
-         LOVGA SUBSCRIBER LOAD DASHBOARD         
-=================================================
-Elapsed Time:      00:00:10
-Active Clients:    10 / 10
-Messages Received: 9,918
-ACKs Sent:         9,918
-Throughput:        2525.44 msg/sec
-End-to-End Latency:
-  - Average:       6266.80 ms
-  - Min:           94.38 ms
-  - Max:           8043.21 ms
-=================================================
-Press Ctrl+C to stop.
-=================================================
-         LOVGA SUBSCRIBER LOAD DASHBOARD         
-=================================================
-Elapsed Time:      00:00:11
-Active Clients:    10 / 10
-Messages Received: 12,484
-ACKs Sent:         12,483
-Throughput:        2565.23 msg/sec
-End-to-End Latency:
-  - Average:       6673.88 ms
-  - Min:           94.38 ms
-  - Max:           8688.92 ms
-=================================================
-Press Ctrl+C to stop.
-=================================================
-         LOVGA SUBSCRIBER LOAD DASHBOARD         
-=================================================
-Elapsed Time:      00:00:12
-Active Clients:    10 / 10
-Messages Received: 15,162
-ACKs Sent:         15,162
-Throughput:        2677.27 msg/sec
-End-to-End Latency:
-  - Average:       7085.45 ms
-  - Min:           94.38 ms
-  - Max:           9483.19 ms
+  - Average:       35.22 ms
+  - Min:           1.73 ms
+  - Max:           222.43 ms
 =================================================
 Press Ctrl+C to stop.

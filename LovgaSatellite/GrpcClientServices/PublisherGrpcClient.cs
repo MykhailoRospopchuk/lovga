@@ -1,40 +1,36 @@
 namespace LovgaSatellite.GrpcClientServices;
 
 using System.Text.Json;
-using Grpc.Core;
+using Grpc.Net.Client;
 using GrpcChannel;
 using LovgaCommon;
 
-public class PublisherGrpcClient
+public sealed class PublisherGrpcClient
 {
-    private readonly Channel? _channel;
+    private readonly GrpcChannel? _channel = GrpcChannelProvider.GetInstance()?.Channel;
 
-    public PublisherGrpcClient()
-    {
-        _channel = GrpcChannelProvider.GetInstance()?.Channel;
-    }
-
-    public async Task<bool> PublishMessage<T>(T message, string topic) 
+    public async Task<bool> PublishMessage<T>(T message, string topic, CancellationToken cancellationToken = default)
     {
         if (_channel is null)
         {
             throw new InvalidOperationException("Channel is not initialized");
         }
 
-        if (string.IsNullOrEmpty(topic))
-        {
-            throw new ArgumentNullException(nameof(topic));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(topic);
 
-        var content = JsonSerializer.Serialize(message);
+        var content = message is string rawString
+            ? rawString
+            : JsonSerializer.Serialize(message);
 
         var client = new Publisher.PublisherClient(_channel);
 
-        var reply = await client.PublishAsync(new PublishRequest()
-        {
-            Topic = topic,
-            Content = content,
-        });
+        var reply = await client.PublishAsync(
+            new PublishRequest
+            {
+                Topic = topic,
+                Content = content,
+            },
+            cancellationToken: cancellationToken);
 
         return reply.Success;
     }

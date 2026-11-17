@@ -2,22 +2,21 @@ namespace LovgaPublisher;
 
 using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Grpc.Core;
+using Grpc.Net.Client;
 using LovgaCommon;
 
-class Program
+internal sealed class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Console.Clear();
         Console.WriteLine("=================================================");
         Console.WriteLine("          LOVGA PUBLISHER LOAD TESTER            ");
         Console.WriteLine("=================================================");
 
-        // Default Configuration values
         string host = "localhost";
         int port = 8080;
         int concurrency = 10;
@@ -29,7 +28,6 @@ class Program
         bool isLoadTest = true;
         int pipeline = 1;
 
-        // Command-line Argument Parsing
         for (int i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -67,7 +65,6 @@ class Program
             }
         }
 
-        // If no CLI args, ask interactively
         if (args.Length == 0)
         {
             Console.WriteLine("Select Mode:");
@@ -76,7 +73,7 @@ class Program
             Console.WriteLine("3. Run Legacy Publisher Mode");
             Console.Write("Choose an option [1]: ");
             var choice = Console.ReadLine()?.Trim() ?? "";
-            
+
             if (choice == "3")
             {
                 isLoadTest = false;
@@ -134,17 +131,16 @@ class Program
         }
 
         var stats = new Stats();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var stopwatch = Stopwatch.StartNew();
 
-        // Start stats dashboard task
         var dashboardTask = Task.Run(async () =>
         {
             var lastSent = 0L;
             var lastTime = DateTime.UtcNow;
             while (!cts.Token.IsCancellationRequested)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cts.Token);
                 var now = DateTime.UtcNow;
                 var elapsed = stopwatch.Elapsed;
                 var totalSent = stats.TotalSent;
@@ -153,9 +149,9 @@ class Program
                 var deltaTime = (now - lastTime).TotalSeconds;
                 var throughput = deltaTime > 0 ? deltaSent / deltaTime : 0;
 
-                double avgLat = 0;
-                double minLat = 0;
-                double maxLat = 0;
+                double avgLat;
+                double minLat;
+                double maxLat;
                 lock (stats.LockObj)
                 {
                     avgLat = stats.TotalSent > 0 ? stats.TotalLatencyMs / stats.TotalSent : 0;
@@ -183,7 +179,7 @@ class Program
             }
         });
 
-        // Start worker tasks
+        using var sharedChannel = CreateChannel(host, port);
         var tasks = new Task[concurrency];
         var padding = new string('x', payloadSize);
 
@@ -193,58 +189,63 @@ class Program
             tasks[i] = Task.Run(async () =>
             {
                 Interlocked.Increment(ref stats.ActiveWorkers);
-                var channel = new Channel(host, port, ChannelCredentials.Insecure);
-                var client = new Publisher.PublisherClient(channel);
+                var client = new Publisher.PublisherClient(sharedChannel);
                 var topic = numTopics == 1 ? baseTopic : $"{baseTopic}-{workerId % numTopics}";
 
                 try
                 {
-                    var activeTasks = new List<Task>();
-                    var semaphore = new SemaphoreSlim(pipeline);
+                    var activeTasks = new List<Task>(pipeline * 2);
+                    using var semaphore = new SemaphoreSlim(pipeline);
 
-                    for (int msgSeq = 0; msgSeq < messagesPerWorker; msgSeq++)
+                    for (int msgSeq = 0; msgSeq < messagesPerWorker && !cts.Token.IsCancellationRequested; msgSeq++)
                     {
                         var ticks = DateTime.UtcNow.Ticks;
                         var content = $"{ticks}|W{workerId}|S{msgSeq}|{padding}";
 
-                        await semaphore.WaitAsync();
+                        await semaphore.WaitAsync(cts.Token);
 
                         var startTime = Stopwatch.GetTimestamp();
-                        var publishTask = client.PublishAsync(new PublishRequest
-                        {
-                            Topic = topic,
-                            Content = content
-                        }).ResponseAsync;
+                        var publishTask = client.PublishAsync(
+                            new PublishRequest
+                            {
+                                Topic = topic,
+                                Content = content
+                            },
+                            cancellationToken: cts.Token).ResponseAsync;
 
-                        var continuation = publishTask.ContinueWith(t =>
-                        {
-                            semaphore.Release();
-                            var elapsedMs = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
-                            if (t.Status == TaskStatus.RanToCompletion && t.Result.Success)
+                        var continuation = publishTask.ContinueWith(
+                            t =>
                             {
-                                stats.RecordSuccess(elapsedMs);
-                            }
-                            else
-                            {
-                                stats.RecordFailure();
-                            }
-                        });
+                                semaphore.Release();
+                                var elapsedMs = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+                                if (t.Status == TaskStatus.RanToCompletion && t.Result.Success)
+                                {
+                                    stats.RecordSuccess(elapsedMs);
+                                }
+                                else
+                                {
+                                    stats.RecordFailure();
+                                }
+                            },
+                            TaskContinuationOptions.ExecuteSynchronously);
 
                         activeTasks.Add(continuation);
 
-                        // Clean up completed tasks from activeTasks list periodically to prevent memory growth
                         if (activeTasks.Count > pipeline * 2)
                         {
-                            activeTasks.RemoveAll(t => t.IsCompleted);
+                            activeTasks.RemoveAll(static t => t.IsCompleted);
                         }
 
                         if (delayMs > 0)
                         {
-                            await Task.Delay(delayMs);
+                            await Task.Delay(delayMs, cts.Token);
                         }
                     }
 
                     await Task.WhenAll(activeTasks);
+                }
+                catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+                {
                 }
                 catch (Exception ex)
                 {
@@ -253,7 +254,6 @@ class Program
                 finally
                 {
                     Interlocked.Decrement(ref stats.ActiveWorkers);
-                    await channel.ShutdownAsync();
                 }
             });
         }
@@ -286,10 +286,26 @@ class Program
         Console.WriteLine("=================================================");
     }
 
+    private static GrpcChannel CreateChannel(string host, int port)
+    {
+        var handler = new SocketsHttpHandler
+        {
+            EnableMultipleHttp2Connections = true,
+            KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(10),
+            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan
+        };
+
+        return GrpcChannel.ForAddress($"http://{host}:{port}", new GrpcChannelOptions
+        {
+            HttpHandler = handler
+        });
+    }
+
     private static async Task RunLegacyPublisher()
     {
         Console.WriteLine("Running legacy publisher...");
-        var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
+        using var channel = CreateChannel("localhost", 8080);
         var client = new Publisher.PublisherClient(channel);
 
         var random = new Random();
@@ -331,15 +347,15 @@ class Program
         }
     }
 
-    private class Stats
+    private sealed class Stats
     {
-        public int ActiveWorkers = 0;
-        public long TotalSent = 0;
-        public long TotalFailed = 0;
-        public double TotalLatencyMs = 0;
+        public int ActiveWorkers;
+        public long TotalSent;
+        public long TotalFailed;
+        public double TotalLatencyMs;
         public double MinLatencyMs = double.MaxValue;
-        public double MaxLatencyMs = 0;
-        public readonly object LockObj = new();
+        public double MaxLatencyMs;
+        public readonly Lock LockObj = new();
 
         public void RecordSuccess(double latencyMs)
         {

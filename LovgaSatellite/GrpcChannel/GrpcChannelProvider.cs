@@ -1,25 +1,44 @@
 namespace LovgaSatellite.GrpcChannel;
 
-using Grpc.Core;
+using System.Net.Http;
+using Grpc.Net.Client;
 
-internal class GrpcChannelProvider
+internal sealed class GrpcChannelProvider
 {
     private GrpcChannelProvider() { }
 
     private static GrpcChannelProvider? _instance;
 
-    private static readonly Lock Lock = new ();
+    private static readonly Lock Lock = new();
 
     public static GrpcChannelProvider? GetInstance((string host, int port)? data = null)
     {
-        if (_instance == null)
+        if (_instance is null)
         {
             lock (Lock)
             {
-                if (_instance == null &&  data.HasValue && !string.IsNullOrEmpty(data.Value.host))
+                if (_instance is null && data.HasValue && !string.IsNullOrEmpty(data.Value.host))
                 {
-                    _instance = new GrpcChannelProvider();
-                    _instance.Channel = new Channel(data.Value.host, data.Value.port, ChannelCredentials.Insecure);
+                    var handler = new SocketsHttpHandler
+                    {
+                        EnableMultipleHttp2Connections = true,
+                        KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+                        KeepAlivePingTimeout = TimeSpan.FromSeconds(10),
+                        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan
+                    };
+
+                    var address = data.Value.host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                                  data.Value.host.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                        ? $"{data.Value.host}:{data.Value.port}"
+                        : $"http://{data.Value.host}:{data.Value.port}";
+
+                    _instance = new GrpcChannelProvider
+                    {
+                        Channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions
+                        {
+                            HttpHandler = handler
+                        })
+                    };
                 }
             }
         }
@@ -30,9 +49,9 @@ internal class GrpcChannelProvider
     {
         if (_instance?.Channel is null)
         {
-            throw new NullReferenceException("Channel is not initialized");
+            throw new InvalidOperationException("Channel is not initialized");
         }
     }
 
-    public Channel? Channel { get; set; }
+    public GrpcChannel? Channel { get; set; }
 }

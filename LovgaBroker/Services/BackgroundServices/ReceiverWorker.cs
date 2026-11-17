@@ -2,34 +2,28 @@ namespace LovgaBroker.Services.BackgroundServices;
 
 using Interfaces;
 
-public class ReceiverWorker : BackgroundService
+public sealed class ReceiverWorker(ILogger<ReceiverWorker> logger, IReceiver receiver) : BackgroundService
 {
-    private readonly ILogger<ReceiverWorker> _logger;
-    private readonly IReceiver _receiver;
-
-    public ReceiverWorker(ILogger<ReceiverWorker> logger, IReceiver receiver)
-    {
-        _logger = logger;
-        _receiver = receiver;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Receiver Worker is starting.");
+        logger.LogInformation("Receiver Worker is starting.");
 
-        // Load stored messages concurrently in the background so it doesn't deadlock the dispatch loop
+        // Load stored messages up to the startup watermark concurrently so large recovery sets don't block the bounded channel
         _ = Task.Run(async () =>
         {
             try
             {
-                await _receiver.LoadStoredMessages();
+                await receiver.LoadStoredMessages(cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading stored messages on startup");
+                logger.LogError(ex, "Error loading stored messages on startup");
             }
         }, cancellationToken);
 
-        await _receiver.DispatchAsync(cancellationToken);
+        await receiver.DispatchAsync(cancellationToken);
     }
 }

@@ -5,31 +5,26 @@ using LovgaBroker.Interfaces;
 using LovgaCommon;
 using Models;
 
-public class PublisherGrpcServer : Publisher.PublisherBase
+public sealed class PublisherGrpcServer(
+    ILogger<PublisherGrpcServer> logger,
+    IReceiver receiver) : Publisher.PublisherBase
 {
-    private readonly ILogger<PublisherGrpcServer> _logger;
-    private IReceiver _receiver;
-
-    public PublisherGrpcServer(
-        ILogger<PublisherGrpcServer> logger,
-        IReceiver receiver)
-    {
-        _logger = logger;
-        _receiver = receiver;
-    }
-
     public override async Task<Reply> Publish(PublishRequest request, ServerCallContext context)
     {
-        _logger.LogInformation($"Published message from gRPC. Topic: {request.Topic}");
-        await _receiver.Publish(new Message
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("Published message from gRPC. Topic: {Topic}", request.Topic);
+        }
+
+        var success = await receiver.Publish(new Message
         {
             Topic = request.Topic,
             Content = request.Content
-        });
+        }, context.CancellationToken);
 
         return new Reply
         {
-            Success = true,
+            Success = success,
         };
     }
 }

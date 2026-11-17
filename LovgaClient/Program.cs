@@ -2,22 +2,22 @@ namespace LovgaClient;
 
 using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Grpc.Core;
+using Grpc.Net.Client;
 using LovgaCommon;
 
-class Program
+internal sealed class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         Console.Clear();
         Console.WriteLine("=================================================");
         Console.WriteLine("          LOVGA SUBSCRIBER LOAD TESTER           ");
         Console.WriteLine("=================================================");
 
-        // Default Configuration values
         string host = "localhost";
         int port = 8080;
         int concurrency = 10;
@@ -25,7 +25,6 @@ class Program
         string baseTopic = "bobr-topic";
         bool isLoadTest = true;
 
-        // Command-line Argument Parsing
         for (int i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -51,7 +50,6 @@ class Program
             }
         }
 
-        // If no CLI args, ask interactively
         if (args.Length == 0)
         {
             Console.WriteLine("Select Mode:");
@@ -102,17 +100,16 @@ class Program
         }
 
         var stats = new Stats();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var stopwatch = Stopwatch.StartNew();
 
-        // Start stats dashboard task
         var dashboardTask = Task.Run(async () =>
         {
             var lastReceived = 0L;
             var lastTime = DateTime.UtcNow;
             while (!cts.Token.IsCancellationRequested)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cts.Token);
                 var now = DateTime.UtcNow;
                 var elapsed = stopwatch.Elapsed;
                 var totalRecv = stats.TotalReceived;
@@ -121,9 +118,9 @@ class Program
                 var deltaTime = (now - lastTime).TotalSeconds;
                 var throughput = deltaTime > 0 ? deltaRecv / deltaTime : 0;
 
-                double avgLat = 0;
-                double minLat = 0;
-                double maxLat = 0;
+                double avgLat;
+                double minLat;
+                double maxLat;
                 lock (stats.LockObj)
                 {
                     avgLat = stats.TotalReceived > 0 ? stats.TotalLatencyMs / stats.TotalReceived : 0;
@@ -152,7 +149,8 @@ class Program
             }
         });
 
-        // Start subscriber tasks
+        using var sharedChannel = CreateChannel(host, port);
+
         var tasks = new Task[concurrency];
         for (int i = 0; i < concurrency; i++)
         {
@@ -161,17 +159,22 @@ class Program
             {
                 var subscriberId = Guid.NewGuid().ToString();
                 var topic = numTopics == 1 ? baseTopic : $"{baseTopic}-{workerId % numTopics}";
-                
+                var client = new Subscriber.SubscriberClient(sharedChannel);
+
                 while (!cts.Token.IsCancellationRequested)
                 {
-                    var channel = new Channel(host, port, ChannelCredentials.Insecure);
-                    var client = new Subscriber.SubscriberClient(channel);
-                    
+                    var ackChannel = System.Threading.Channels.Channel.CreateUnbounded<AcknowledgeAction>(
+                        new System.Threading.Channels.UnboundedChannelOptions
+                        {
+                            SingleReader = true,
+                            SingleWriter = true
+                        });
+                    Task? ackWriterTask = null;
+
                     try
                     {
                         using var call = client.SubscribeStream(cancellationToken: cts.Token);
-                        
-                        // Send Subscribe request
+
                         await call.RequestStream.WriteAsync(new ClientMessage
                         {
                             Subscribe = new SubscribeAction
@@ -183,10 +186,7 @@ class Program
 
                         Interlocked.Increment(ref stats.ActiveConnections);
 
-                        var ackChannel = System.Threading.Channels.Channel.CreateUnbounded<AcknowledgeAction>();
-
-                        // Background ACK writer for this stream
-                        var ackWriterTask = Task.Run(async () =>
+                        ackWriterTask = Task.Run(async () =>
                         {
                             try
                             {
@@ -199,57 +199,63 @@ class Program
                                     stats.RecordAck();
                                 }
                             }
-                            catch { }
+                            catch
+                            {
+                                // Expected on shutdown or stream reset
+                            }
                         });
 
                         await foreach (var message in call.ResponseStream.ReadAllAsync(cts.Token))
                         {
-                            // Try parsing message content to calculate latency
-                            // Format: ticks|workerId|msgSeq|padding
                             double latencyMs = 0;
-                            var parts = message.Content.Split('|');
-                            if (parts.Length >= 4 && long.TryParse(parts[0], out var sentTicks))
+                            ReadOnlySpan<char> contentSpan = message.Content.AsSpan();
+                            var pipeIndex = contentSpan.IndexOf('|');
+                            if (pipeIndex > 0 && long.TryParse(contentSpan[..pipeIndex], out var sentTicks))
                             {
                                 var diffTicks = DateTime.UtcNow.Ticks - sentTicks;
                                 latencyMs = (double)diffTicks / TimeSpan.TicksPerMillisecond;
-                                // Handle negative/skew cases gracefully
                                 if (latencyMs < 0) latencyMs = 0;
                             }
 
                             stats.RecordReceived(latencyMs);
 
-                            // Queue ACK write asynchronously (non-blocking)
                             ackChannel.Writer.TryWrite(new AcknowledgeAction
                             {
                                 MessageId = message.MessageId,
                                 Topic = message.Topic
                             });
                         }
-
-                        ackChannel.Writer.Complete();
-                        await ackWriterTask;
                     }
                     catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
                     {
                         // Expected on shutdown
                     }
+                    catch (OperationCanceledException) when (cts.Token.IsCancellationRequested)
+                    {
+                        // Expected on shutdown
+                    }
                     catch (Exception)
                     {
-                        // Network error, pause before reconnecting
-                        await Task.Delay(1000);
+                        if (!cts.Token.IsCancellationRequested)
+                        {
+                            await Task.Delay(1000);
+                        }
                     }
                     finally
                     {
+                        ackChannel.Writer.TryComplete();
+                        if (ackWriterTask is not null)
+                        {
+                            try { await ackWriterTask; } catch { }
+                        }
                         Interlocked.Decrement(ref stats.ActiveConnections);
-                        await channel.ShutdownAsync();
                     }
                 }
             });
         }
 
-        // Wait for cancellation (e.g. Ctrl+C)
         var tcsExit = new TaskCompletionSource();
-        Console.CancelKeyPress += (sender, e) =>
+        Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
             tcsExit.TrySetResult();
@@ -257,7 +263,7 @@ class Program
 
         await tcsExit.Task;
         cts.Cancel();
-        
+
         try
         {
             await Task.WhenAll(tasks);
@@ -289,18 +295,33 @@ class Program
         Console.WriteLine("=================================================");
     }
 
+    private static GrpcChannel CreateChannel(string host, int port)
+    {
+        var handler = new SocketsHttpHandler
+        {
+            EnableMultipleHttp2Connections = true,
+            KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+            KeepAlivePingTimeout = TimeSpan.FromSeconds(10),
+            PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan
+        };
+
+        return GrpcChannel.ForAddress($"http://{host}:{port}", new GrpcChannelOptions
+        {
+            HttpHandler = handler
+        });
+    }
+
     private static async Task RunLegacySubscriber()
     {
         Console.WriteLine("Starting Lovga Client (Bi-directional Streaming)...");
         var subscriberId = Guid.NewGuid().ToString();
         var topic = "bobr-topic";
 
-        var channel = new Channel("localhost", 8080, ChannelCredentials.Insecure);
+        using var channel = CreateChannel("localhost", 8080);
         var client = new Subscriber.SubscriberClient(channel);
 
         using var call = client.SubscribeStream();
 
-        // 1. Send Subscribe request
         await call.RequestStream.WriteAsync(new ClientMessage
         {
             Subscribe = new SubscribeAction
@@ -312,7 +333,6 @@ class Program
 
         Console.WriteLine($"Subscribed to topic '{topic}' with ID {subscriberId}. Waiting for messages...");
 
-        // 2. Read messages from broker in a loop
         var readTask = Task.Run(async () =>
         {
             try
@@ -321,7 +341,6 @@ class Program
                 {
                     Console.WriteLine($"[Received] MsgId: {message.MessageId} Topic: {message.Topic} Content: {message.Content}");
 
-                    // Send ACK back to the broker
                     await call.RequestStream.WriteAsync(new ClientMessage
                     {
                         Ack = new AcknowledgeAction
@@ -343,24 +362,22 @@ class Program
             }
         });
 
-        // Keep running until user terminates
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();
 
-        // Clean up
         await call.RequestStream.CompleteAsync();
         await readTask;
     }
 
-    private class Stats
+    private sealed class Stats
     {
-        public int ActiveConnections = 0;
-        public long TotalReceived = 0;
-        public long TotalAcks = 0;
-        public double TotalLatencyMs = 0;
+        public int ActiveConnections;
+        public long TotalReceived;
+        public long TotalAcks;
+        public double TotalLatencyMs;
         public double MinLatencyMs = double.MaxValue;
-        public double MaxLatencyMs = 0;
-        public readonly object LockObj = new();
+        public double MaxLatencyMs;
+        public readonly Lock LockObj = new();
 
         public void RecordReceived(double latencyMs)
         {

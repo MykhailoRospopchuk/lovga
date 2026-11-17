@@ -28,7 +28,7 @@ rm -f logs/broker.log logs/client-*.log logs/publisher-*.log
 
 # Start the Broker
 echo "Starting Broker..."
-dotnet LovgaBroker/bin/Release/net9.0/LovgaBroker.dll > logs/broker.log 2>&1 &
+dotnet LovgaBroker/bin/Release/net10.0/LovgaBroker.dll > logs/broker.log 2>&1 &
 BROKER_PID=$!
 sleep 3 # Wait for broker to boot
 
@@ -36,7 +36,7 @@ sleep 3 # Wait for broker to boot
 echo "Starting $CLIENT_PROCESSES subscriber processes (Total connections: $((CLIENT_PROCESSES * CONCURRENCY)))..."
 CLIENT_PIDS=()
 for i in $(seq 1 $CLIENT_PROCESSES); do
-    dotnet LovgaClient/bin/Release/net9.0/LovgaClient.dll --concurrency $CONCURRENCY --topics $TOPICS > "logs/client-$i.log" 2>&1 &
+    dotnet LovgaClient/bin/Release/net10.0/LovgaClient.dll --concurrency $CONCURRENCY --topics $TOPICS > "logs/client-$i.log" 2>&1 &
     CLIENT_PIDS+=($!)
 done
 
@@ -46,7 +46,7 @@ sleep 1
 echo "Starting $PUBLISHER_PROCESSES publisher processes (Total load: $((PUBLISHER_PROCESSES * CONCURRENCY * MESSAGES)) messages)..."
 PUBLISHER_PIDS=()
 for i in $(seq 1 $PUBLISHER_PROCESSES); do
-    dotnet LovgaPublisher/bin/Release/net9.0/LovgaPublisher.dll --concurrency $CONCURRENCY --topics $TOPICS --messages $MESSAGES --pipeline $PIPELINE --size $PAYLOAD_SIZE > "logs/publisher-$i.log" 2>&1 &
+    dotnet LovgaPublisher/bin/Release/net10.0/LovgaPublisher.dll --concurrency $CONCURRENCY --topics $TOPICS --messages $MESSAGES --pipeline $PIPELINE --size $PAYLOAD_SIZE > "logs/publisher-$i.log" 2>&1 &
     PUBLISHER_PIDS+=($!)
 done
 

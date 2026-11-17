@@ -5,5 +5,5 @@ using Models;
 public interface IConsumerGrpcClient
 {
     string Id { get; }
-    Task<bool> DeliverMessage(Message message);
+    Task<bool> DeliverMessage(Message message, CancellationToken cancellationToken = default);
 }

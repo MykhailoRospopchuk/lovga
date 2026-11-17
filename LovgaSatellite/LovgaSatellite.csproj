@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>LovgaSatellite</PackageId>
-    <Version>1.0.11</Version>
+    <Version>1.0.12</Version>
     <Authors>LovgaSatellite</Authors>
     <Company>Lovga_Mykhailo</Company>
     <Product>Lovga</Product>
@@ -15,24 +16,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.30.1" />
-    <PackageReference Include="Grpc.Core" Version="2.46.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.71.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LovgaCommon\LovgaCommon.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Client"/>
-    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Server"/>
-    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Client"/>
-    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
   </ItemGroup>
 </Project>

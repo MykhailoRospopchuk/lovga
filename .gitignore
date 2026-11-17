@@ -402,6 +402,7 @@ FodyWeavers.xsd
 
 # Local nuget folder
 .local_nugets
+.local_nuget
 # Local slqite DB
 .storage_database
 

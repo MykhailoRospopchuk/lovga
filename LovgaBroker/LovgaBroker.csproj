@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14.0</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-LovgaBroker-21798620-7d74-4bb5-a194-e8dece4890ff</UserSecretsId>
@@ -10,26 +11,12 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Google.Protobuf" Version="3.30.1" />
-    <PackageReference Include="Grpc.Core" Version="2.46.6" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.70.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.71.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.11" />
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.70.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LovgaCommon\LovgaCommon.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="..\LovgaCommon\Protos\subscriber.proto" GrpcServices="Server"/>
-    <Protobuf Include="..\LovgaCommon\Protos\consumer.proto" GrpcServices="Client"/>
-    <Protobuf Include="..\LovgaCommon\Protos\publisher.proto" GrpcServices="Server"/>
-    <Protobuf Include="..\LovgaCommon\Protos\common.proto" />
   </ItemGroup>
 </Project>

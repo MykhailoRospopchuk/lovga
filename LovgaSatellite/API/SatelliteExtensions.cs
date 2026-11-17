@@ -24,9 +24,9 @@ public static class SatelliteExtensions
             throw new InvalidOperationException("ConfigureChannel can only be called once");
         }
 
-        if (port < 0)
+        if (port is <= 0 or > 65535)
         {
-            throw new ArgumentException("Port cannot be negative", nameof(port));
+            throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535");
         }
 
         _channelHost = host;
@@ -35,6 +35,7 @@ public static class SatelliteExtensions
         _configuredChannel = true;
     }
 
+    [Obsolete("Bi-directional streaming no longer requires hosting a local gRPC server on the satellite.")]
     public static void ConfigureHost(string host, int port)
     {
         ArgumentException.ThrowIfNullOrEmpty(host);
@@ -44,9 +45,9 @@ public static class SatelliteExtensions
             throw new InvalidOperationException("ConfigureHost can only be called once");
         }
 
-        if (port < 0)
+        if (port is <= 0 or > 65535)
         {
-            throw new ArgumentException("Port cannot be negative", nameof(port));
+            throw new ArgumentOutOfRangeException(nameof(port), "Port must be between 1 and 65535");
         }
 
         _satelliteHost = host;
@@ -55,6 +56,7 @@ public static class SatelliteExtensions
         ConfiguredHost = true;
     }
 
+    [Obsolete("Bi-directional streaming no longer requires hosting a local gRPC server on the satellite.")]
     public static (string host, int port) GetHostConfiguration()
     {
         if (!ConfiguredHost)
@@ -64,16 +66,17 @@ public static class SatelliteExtensions
 
         return (_satelliteHost, _satellitePort);
     }
+
     public static bool InitChannel()
     {
         if (!_configuredChannel)
         {
-            throw new NotSupportedException("You must call ConfigureHost() before calling InitChannel()");
+            throw new NotSupportedException("You must call ConfigureChannel() before calling InitChannel()");
         }
 
         var instance = GrpcChannelProvider.GetInstance((_channelHost, _channelPort));
 
-        return instance is null;
+        return instance is not null;
     }
 
     public static bool RegisterAction(string topic, Action<ActionModel> action)
